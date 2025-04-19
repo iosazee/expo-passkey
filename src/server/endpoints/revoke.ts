@@ -1,6 +1,6 @@
 /**
  * @file Revoke passkey endpoint
- * @description Implementation of the endpoint to revoke a passkey
+ * @description Implementation of the endpoint to revoke a WebAuthn passkey
  */
 
 import { createAuthEndpoint } from "better-auth/api";
@@ -25,7 +25,7 @@ export const createRevokeEndpoint = (options: { logger: Logger }) => {
       body: revokePasskeySchema,
       metadata: {
         openapi: {
-          description: "Revoke a registered passkey",
+          description: "Revoke a registered WebAuthn passkey",
           tags: ["Authentication"],
           responses: {
             200: {
@@ -65,23 +65,23 @@ export const createRevokeEndpoint = (options: { logger: Logger }) => {
       },
     },
     async (ctx) => {
-      const { userId, deviceId, reason } = ctx.body;
+      const { userId, credentialId, reason } = ctx.body;
 
       try {
-        logger.debug("Revoking passkey", { userId, deviceId });
+        logger.debug("Revoking passkey", { userId, credentialId });
 
-        // Find the active credential for the provided device ID and user ID
+        // Find the active credential for the provided credential ID and user ID
         const credential = await ctx.context.adapter.findOne<MobilePasskey>({
           model: "mobilePasskey",
           where: [
-            { field: "deviceId", operator: "eq", value: deviceId },
+            { field: "credentialId", operator: "eq", value: credentialId },
             { field: "userId", operator: "eq", value: userId },
             { field: "status", operator: "eq", value: "active" },
           ],
         });
 
         if (!credential) {
-          logger.warn("Revoke failed: Passkey not found", { deviceId });
+          logger.warn("Revoke failed: Passkey not found", { credentialId });
           throw new APIError("NOT_FOUND", {
             code: ERROR_CODES.SERVER.CREDENTIAL_NOT_FOUND,
             message: ERROR_MESSAGES[ERROR_CODES.SERVER.CREDENTIAL_NOT_FOUND],
@@ -104,7 +104,7 @@ export const createRevokeEndpoint = (options: { logger: Logger }) => {
 
         logger.info("Passkey revoked successfully", {
           userId,
-          deviceId,
+          credentialId,
           reason: reason || "user_initiated",
         });
 

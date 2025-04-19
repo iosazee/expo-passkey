@@ -1,6 +1,6 @@
 /**
  * @file List passkeys endpoint
- * @description Implementation of the endpoint to list user passkeys
+ * @description Implementation of the endpoint to list user passkeys with WebAuthn info
  */
 
 import { createAuthEndpoint, sessionMiddleware } from "better-auth/api";
@@ -47,7 +47,7 @@ export const createListEndpoint = (options: { logger: Logger }) => {
                           properties: {
                             id: { type: "string" },
                             userId: { type: "string" },
-                            deviceId: { type: "string" },
+                            credentialId: { type: "string" },
                             platform: { type: "string" },
                             lastUsed: {
                               type: "string",
@@ -56,6 +56,10 @@ export const createListEndpoint = (options: { logger: Logger }) => {
                             status: {
                               type: "string",
                               enum: ["active", "revoked"],
+                            },
+                            aaguid: {
+                              type: "string",
+                              nullable: true,
                             },
                             createdAt: {
                               type: "string",
@@ -106,25 +110,6 @@ export const createListEndpoint = (options: { logger: Logger }) => {
                 },
               },
             },
-            500: {
-              description: "Server Error",
-              content: {
-                "application/json": {
-                  schema: {
-                    type: "object",
-                    properties: {
-                      error: {
-                        type: "object",
-                        properties: {
-                          code: { type: "string" },
-                          message: { type: "string" },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
           },
         },
       },
@@ -135,7 +120,7 @@ export const createListEndpoint = (options: { logger: Logger }) => {
         const limit = parseInt(ctx.query.limit || "10", 10);
         const offset = ctx.query.offset ? parseInt(ctx.query.offset, 10) : 0;
 
-        logger.debug("Server received passkey list request:", {
+        logger.debug("Passkey list request received:", {
           userId,
           limit,
           offset,
@@ -173,10 +158,11 @@ export const createListEndpoint = (options: { logger: Logger }) => {
         const formattedPasskeys = results.map((passkey) => ({
           id: passkey.id,
           userId: passkey.userId,
-          deviceId: passkey.deviceId,
+          credentialId: passkey.credentialId,
           platform: passkey.platform,
           lastUsed: passkey.lastUsed,
           status: passkey.status,
+          aaguid: passkey.aaguid || null,
           createdAt: passkey.createdAt,
           updatedAt: passkey.updatedAt,
           revokedAt: passkey.revokedAt,
@@ -197,7 +183,7 @@ export const createListEndpoint = (options: { logger: Logger }) => {
           nextOffset: hasMore ? offset + limit : undefined,
         });
       } catch (error) {
-        logger.error("Server error in listPasskeys:", error);
+        logger.error("Error listing passkeys:", error);
 
         if (error instanceof APIError) {
           throw error;

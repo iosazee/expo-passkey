@@ -6,11 +6,32 @@
 import { z } from "zod";
 
 /**
- * Schema for passkey registration requests
+ * Schema for WebAuthn challenge requests
+ */
+export const challengeSchema = z.object({
+  userId: z.string(),
+  type: z.enum(["registration", "authentication"]),
+});
+
+/**
+ * Schema for WebAuthn passkey registration requests
  */
 export const registerPasskeySchema = z.object({
   userId: z.string(),
-  deviceId: z.string(),
+  credential: z.object({
+    id: z.string(),
+    rawId: z.string(),
+    response: z.object({
+      clientDataJSON: z.string(),
+      attestationObject: z.string(),
+      transports: z.array(z.string()).optional(),
+    }),
+    type: z.literal("public-key"),
+    clientExtensionResults: z.object({}).optional(),
+    authenticatorAttachment: z
+      .union([z.literal("platform"), z.literal("cross-platform")])
+      .optional(),
+  }),
   platform: z.string(),
   metadata: z
     .object({
@@ -25,10 +46,21 @@ export const registerPasskeySchema = z.object({
 });
 
 /**
- * Schema for passkey authentication requests
+ * Schema for WebAuthn passkey authentication requests
  */
 export const authenticatePasskeySchema = z.object({
-  deviceId: z.string(),
+  credential: z.object({
+    id: z.string(),
+    rawId: z.string(),
+    response: z.object({
+      clientDataJSON: z.string(),
+      authenticatorData: z.string(),
+      signature: z.string(),
+      userHandle: z.string().optional(),
+    }),
+    type: z.literal("public-key"),
+    clientExtensionResults: z.object({}).optional(),
+  }),
   metadata: z
     .object({
       lastLocation: z.string().optional(),
@@ -63,6 +95,6 @@ export const listPasskeysParamsSchema = z.object({
  */
 export const revokePasskeySchema = z.object({
   userId: z.string(),
-  deviceId: z.string(),
+  credentialId: z.string(),
   reason: z.string().optional(),
 });
