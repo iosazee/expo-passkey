@@ -76,7 +76,7 @@
     "ios",
     "LICENSE",
     "README.md",
-    "scripts/check-server-deps.js",
+    "scripts",
     "CHANGELOG.md"
   ],
   "sideEffects": false,
@@ -84,7 +84,7 @@
     "clean": "rimraf dist",
     "build": "tsup",
     "dev": "tsup --watch",
-    "postinstall": "node scripts/check-server-deps.js || true",
+    "postinstall": "node scripts/check-server-deps.cjs || true",
     "test": "jest",
     "test:client": "jest --selectProjects client",
     "test:server": "jest --selectProjects server",
