@@ -97,7 +97,7 @@ describe("Schema definitions", () => {
             clientDataJSON: "json-data",
             authenticatorData: "authenticator-data",
             signature: "signature",
-            userHandle: "user-123"
+            userHandle: "user-123",
           },
           type: "public-key",
         },
@@ -232,6 +232,5 @@ describe("Schema definitions", () => {
       const result = listPasskeysQuerySchema.safeParse(partialQuery);
       expect(result.success).toBe(true);
     });
-
   });
 });

@@ -7,7 +7,6 @@ import { mobilePasskeySchema } from "../../../types";
 
 describe("MobilePasskey Schema Tests", () => {
   describe("mobilePasskeySchema validation", () => {
-
     // Test the default value for status
     it("should apply default value 'active' for status when missing", () => {
       const passkey = {
@@ -31,7 +30,6 @@ describe("MobilePasskey Schema Tests", () => {
         expect(result.data.status).toBe("active");
       }
     });
-
 
     // Verify required fields
     it("should reject when required fields are missing", () => {
@@ -62,7 +60,7 @@ describe("MobilePasskey Schema Tests", () => {
 
       const result2 = mobilePasskeySchema.safeParse(missingCredentialId);
       expect(result2.success).toBe(false);
-      
+
       // Missing publicKey
       const missingPublicKey = {
         id: "passkey-123",
