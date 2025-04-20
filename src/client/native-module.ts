@@ -3,6 +3,7 @@
  * @module expo-passkey/client/native-module
  */
 
+import { requireOptionalNativeModule } from "expo-modules-core";
 import { ERROR_CODES, PasskeyError } from "../types/errors";
 import type {
   AuthenticationPublicKeyCredential,
@@ -40,7 +41,7 @@ interface ExpoPasskeyModule {
  */
 export function getNativeModule(): ExpoPasskeyModule {
   try {
-    const { ExpoPasskey } = require("expo-modules-core").NativeModulesProxy;
+    const ExpoPasskey = requireOptionalNativeModule("ExpoPasskey");
 
     if (!ExpoPasskey) {
       throw new PasskeyError(
