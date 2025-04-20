@@ -1,6 +1,6 @@
 {
   "name": "expo-passkey",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.2",
   "type": "module",
   "description": "Passkey authentication for Expo apps with Better Auth integration",
   "author": "Zee Mudia",
@@ -173,12 +173,12 @@
     "@better-auth/expo": {
       "optional": true
     },
-    "expo-modules-core":{
+    "expo-modules-core": {
       "optional": true
     },
-     "@simplewebauthn/server":{
+    "@simplewebauthn/server": {
       "optional": true
-     }
+    }
   },
   "publishConfig": {
     "access": "public",
