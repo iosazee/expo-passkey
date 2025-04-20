@@ -13,8 +13,10 @@ A Better Auth plugin enabling secure, passwordless authentication in Expo applic
 
 - [Overview](#overview)
 - [Key Features](#key-features)
+- [WebAuthn Technical Implementation](#webauthn-technical-implementation)
 - [Platform Requirements](#platform-requirements)
 - [Installation](#installation)
+- [Digital Asset Links Setup](#digital-asset-links-setup)
 - [Quick Start](#quick-start)
 - [Detailed Setup](#detailed-setup)
 - [Usage Examples](#usage-examples)
@@ -27,6 +29,9 @@ A Better Auth plugin enabling secure, passwordless authentication in Expo applic
 - [Troubleshooting](#troubleshooting)
 - [Security Considerations](#security-considerations)
 - [Error Handling](#error-handling)
+- [Passkey Provider Information](#passkey-provider-information)
+- [Well-Known URL Support](#well-known-url-support)
+- [Debugging Tools](#debugging-tools)
 - [Bugs and Known Issues](#bugs-and-known-issues)
 - [License](#license)
 
@@ -60,6 +65,56 @@ This package implements the WebAuthn (Web Authentication) standard for passkeys,
 - ✅ **Rich Metadata**: Store and retrieve device-specific context with each passkey
 - ✅ **Custom UI Hooks**: Simplifies integration in your React Native UI
 
+## WebAuthn Technical Implementation
+
+The WebAuthn protocol enables websites and applications to authenticate users without passwords, using public key cryptography instead.
+
+### Platform-specific Implementations
+
+#### iOS Implementation
+
+Expo Passkey uses the following Apple APIs for iOS:
+
+- `ASAuthorizationPlatformPublicKeyCredentialProvider` for platform authenticators (Face ID, Touch ID)
+- `ASAuthorizationSecurityKeyPublicKeyCredentialProvider` for cross-platform authenticators (security keys)
+- Key features:
+  - Full support for iOS 16+ where native PassKeys are available
+  - Proper attestation and assertion handling for authentication
+  - Integration with Apple's authentication UI
+  - Extraction of public keys from attestation objects for verification
+
+#### Android Implementation
+
+For Android, this package utilizes the AndroidX Credentials API:
+
+- `CredentialManager` with `CreatePublicKeyCredentialRequest` for registration
+- `GetPublicKeyCredentialOption` for authentication
+- Key features:
+  - Support for Android 10+ (API level 29+)
+  - Integration with the Android Credentials API
+  - Thread management for credential operations
+  - Support for platform and cross-platform authenticators
+
+### WebAuthn Flow Implementation
+
+#### Registration Flow
+
+1. **Challenge Generation**: The server generates a random challenge and creates WebAuthn registration options.
+2. **Client Processing**: The client receives these options and passes them to the native APIs.
+3. **User Authentication**: The device prompts the user for biometric verification.
+4. **Credential Creation**: Upon successful authentication, a new passkey credential is created.
+5. **Attestation**: The credential includes an attestation object that proves it was generated on a legitimate device.
+6. **Response Validation**: The server validates the attestation response and registers the credential.
+
+#### Authentication Flow
+
+1. **Challenge Generation**: The server generates a random challenge and creates WebAuthn authentication options.
+2. **Client Processing**: The client receives these options and passes them to the native APIs.
+3. **Credential Selection**: The device helps the user select a credential (or uses the one specified).
+4. **User Verification**: The device prompts the user for biometric verification.
+5. **Assertion Creation**: Upon successful verification, an assertion is created and signed with the credential's private key.
+6. **Response Validation**: The server validates the assertion against the stored public key.
+
 ## Platform Requirements
 
 | Platform | Minimum Version | Biometric Requirements |
@@ -87,6 +142,95 @@ npm i expo-passkey
 
 # Install peer dependencies (if not already installed)
 npm install better-auth zod better-fetch
+```
+
+### Android ProGuard Rules
+
+If you're using ProGuard in your Android build, add the following rules to your ProGuard configuration file (`proguard-rules.pro`):
+
+```
+-if class androidx.credentials.CredentialManager
+-keep class androidx.credentials.playservices.** {
+  *;
+}
+```
+
+These rules ensure that the necessary credential provider classes are preserved during code shrinking and optimization.
+
+## Digital Asset Links Setup
+
+For Android devices, you must associate your app with a website that your app owns to enable passkey support. This association is verified through Digital Asset Links.
+
+### 1. Create a Digital Asset Links JSON file
+
+Create a file named `assetlinks.json` with the following content:
+
+```json
+[
+  {
+    "relation" : [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
+    "target" : {
+      "namespace" : "android_app",
+      "package_name" : "your.package.name",
+      "sha256_cert_fingerprints" : [
+        "SHA256_FINGERPRINT_OF_YOUR_APP_SIGNING_CERTIFICATE"
+      ]
+    }
+  }
+]
+```
+
+### 2. Get your app's certificate fingerprint
+
+You can generate the SHA-256 fingerprint of your app's signing certificate using:
+
+```bash
+keytool -list -v -keystore your_keystore.keystore -alias your_alias
+```
+
+Convert the SHA-256 hash to the proper format for Digital Asset Links (base64url-encoded):
+
+```bash
+# Example Python script to convert fingerprint
+import binascii
+import base64
+fingerprint = '91:F7:CB:F9:D6:81:53:1B:C7:A5:8F:B8:33:CC:A1:4D:AB:ED:E5:09:C5'
+print("android:apk-key-hash:" + base64.urlsafe_b64encode(binascii.a2b_hex(fingerprint.replace(':', ''))).decode('utf8').replace('=', ''))
+```
+
+### 3. Host the Digital Asset Links file
+
+Host the `assetlinks.json` file at:
+```
+https://your-domain.com/.well-known/assetlinks.json
+```
+
+Ensure the file is:
+- Served with Content-Type: application/json
+- Returns a 200 HTTP response (not a redirect)
+- Accessible to Googlebot (check your robots.txt)
+
+### 4. Configure your app
+
+Add the following to your Android app's manifest file:
+
+```xml
+<application>
+    <meta-data android:name="asset_statements" android:resource="@string/asset_statements" />
+</application>
+```
+
+And in your strings.xml:
+
+```xml
+<string name="asset_statements" translatable="false">
+[{
+  \"include\": \"https://your-domain.com/.well-known/assetlinks.json\"
+}]
+</string>
 ```
 
 ## Quick Start
@@ -639,7 +783,7 @@ The plugin requires a new table in the database to store biometric data.
 - Table Name 📱: `mobilePasskey` 
 
 | **Field Name**   | **Type**                | **Key** | **Description**                                      |
-|------------------|--------------------------|--------|------------------------------------------------------|
+|------------------|--------------------------|---------|------------------------------------------------------|
 | `id`             | `string`                | PK     | Unique identifier for each mobile passkey            |
 | `userId`         | `string`                | FK     | The ID of the user (references `user.id`)            |
 | `deviceId`       | `string`                | -      | Identifier of the registered device                  |
@@ -1193,7 +1337,6 @@ export function PasskeyManager({ userId }) {
    })
    ```
 
-
 ## Security Considerations
 
 - **Device Binding**: Passkeys are bound to specific devices for security
@@ -1255,6 +1398,133 @@ try {
   // Catch unexpected errors
   console.error("Unexpected error:", error);
   showGenericErrorMessage();
+}
+```
+
+## Passkey Provider Information
+
+Passkeys are created by different providers, and it can be helpful to show this information to users when they manage their passkeys. The provider information is stored in the AAGUID (Authenticator Attestation GUID) field of the WebAuthn response.
+
+### Extracting AAGUID Information
+
+When a passkey is registered, the AAGUID is included in the attestation data. You can extract and store this information:
+
+```javascript
+// Server-side code (during passkey registration)
+const attestationObject = credential.response.attestationObject;
+const attestationData = parseAttestation(attestationObject);
+const aaguid = attestationData.aaguid;
+
+// Store this AAGUID with the passkey in your database
+```
+
+### Known AAGUID Mappings
+
+Here are some common AAGUID values and their corresponding providers:
+
+- Google Password Manager: "ea9b8d66-4d01-1d21-3ce4-b6b48cb575d4"
+- Apple Keychain: "c5ef55ff-ad9a-8d6f-1c2d-0b3e15c1795d"
+
+You can use these values to display friendly provider names in your passkey management UI.
+
+### Displaying Provider Information
+
+When displaying a list of passkeys to the user, include the provider information:
+
+```tsx
+function renderPasskey(passkey) {
+  const providerName = getProviderNameFromAAGUID(passkey.aaguid);
+  
+  return (
+    <View>
+      <Text>Device: {passkey.metadata.deviceName}</Text>
+      <Text>Provider: {providerName}</Text>
+      <Text>Last used: {new Date(passkey.lastUsed).toLocaleDateString()}</Text>
+    </View>
+  );
+}
+```
+
+## Well-Known URL Support
+
+For seamless integration with password and credential management tools, add support for passkey endpoints well-known URLs.
+
+### Setup Well-Known URL
+
+1. Create a JSON file at `https://yourdomain.com/.well-known/passkey-endpoints` with the following content:
+
+```json
+{
+  "enroll": "https://yourdomain.com/account/manage/passkeys/create",
+  "manage": "https://yourdomain.com/account/manage/passkeys"
+}
+```
+
+2. To have these links open in your app instead of the web, use Android App Links and iOS Universal Links.
+
+### Implementation Example
+
+Create routes in your app that handle these paths:
+
+```tsx
+// In your navigation/routes setup
+<Stack.Screen name="ManagePasskeys" component={PasskeyManagerScreen} path="account/manage/passkeys" />
+<Stack.Screen name="CreatePasskey" component={PasskeyCreateScreen} path="account/manage/passkeys/create" />
+```
+
+This allows credential managers and browsers to deep link directly to the passkey management features in your app.
+
+## Debugging Tools
+
+To help with debugging passkey implementation, the library provides several utilities:
+
+### Debug Mode
+
+Enable debug logging in your server configuration:
+
+```typescript
+expoPasskey({
+  rpId: "example.com",
+  rpName: "Your App",
+  logger: {
+    enabled: true,
+    level: "debug" // Use "debug" for maximum verbosity
+  }
+})
+```
+
+### Debug UI Component
+
+Add this component to your development screens to inspect the current passkey state:
+
+```tsx
+function PasskeyDebugger() {
+  const [info, setInfo] = useState(null);
+  const [storageInfo, setStorageInfo] = useState(null);
+  
+  useEffect(() => {
+    async function loadInfo() {
+      const biometricInfo = await getBiometricInfo();
+      setInfo(biometricInfo);
+      
+      const keys = getStorageKeys();
+      const deviceId = await SecureStore.getItemAsync(keys.DEVICE_ID);
+      const userId = await SecureStore.getItemAsync(keys.USER_ID);
+      setStorageInfo({ deviceId, userId });
+    }
+    
+    loadInfo();
+  }, []);
+  
+  return (
+    <ScrollView style={{padding: 10}}>
+      <Text style={{fontWeight: 'bold'}}>Passkey Debug Info</Text>
+      <Text>Device Info:</Text>
+      <Text>{JSON.stringify(info, null, 2)}</Text>
+      <Text>Storage Keys:</Text>
+      <Text>{JSON.stringify(storageInfo, null, 2)}</Text>
+    </ScrollView>
+  );
 }
 ```
 
