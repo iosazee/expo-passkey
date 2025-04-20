@@ -23,6 +23,18 @@ export const ERROR_CODES = {
   NETWORK: {
     REQUEST_FAILED: "network_request_failed",
   },
+  WEBAUTHN: {
+    NOT_SUPPORTED: "webauthn_not_supported",
+    CANCELED: "webauthn_canceled",
+    TIMEOUT: "webauthn_timeout",
+    OPERATION_FAILED: "webauthn_operation_failed",
+    INVALID_STATE: "webauthn_invalid_state",
+    CHALLENGE_EXPIRED: "webauthn_challenge_expired",
+    INVALID_RESPONSE: "webauthn_invalid_response",
+    NOT_SECURE_CONTEXT: "webauthn_not_secure_context",
+    INVALID_CREDENTIAL: "webauthn_invalid_credential",
+    NATIVE_MODULE_ERROR: "webauthn_native_module_error",
+  },
 
   // Server-side error codes
   SERVER: {
@@ -36,6 +48,10 @@ export const ERROR_CODES = {
     INVALID_CLIENT: "invalid_client",
     PASSKEYS_RETRIEVAL_FAILED: "passkeys_retrieval_failed",
     USER_NOT_FOUND: "user_not_found",
+    CHALLENGE_GENERATION_FAILED: "challenge_generation_failed",
+    INVALID_CHALLENGE: "invalid_challenge",
+    EXPIRED_CHALLENGE: "expired_challenge",
+    VERIFICATION_FAILED: "verification_failed",
   },
 } as const;
 
@@ -53,6 +69,19 @@ export const ERROR_MESSAGES = {
     "Biometric authentication failed",
   [ERROR_CODES.DEVICE.ID_GENERATION_FAILED]: "Failed to generate device ID",
   [ERROR_CODES.NETWORK.REQUEST_FAILED]: "Network request failed",
+  [ERROR_CODES.WEBAUTHN.NOT_SUPPORTED]:
+    "WebAuthn is not supported on this device",
+  [ERROR_CODES.WEBAUTHN.CANCELED]:
+    "WebAuthn operation was canceled by the user",
+  [ERROR_CODES.WEBAUTHN.TIMEOUT]: "WebAuthn operation timed out",
+  [ERROR_CODES.WEBAUTHN.OPERATION_FAILED]: "WebAuthn operation failed",
+  [ERROR_CODES.WEBAUTHN.INVALID_STATE]: "WebAuthn is in an invalid state",
+  [ERROR_CODES.WEBAUTHN.CHALLENGE_EXPIRED]: "WebAuthn challenge has expired",
+  [ERROR_CODES.WEBAUTHN.INVALID_RESPONSE]: "Invalid WebAuthn response",
+  [ERROR_CODES.WEBAUTHN.NOT_SECURE_CONTEXT]:
+    "WebAuthn requires a secure context (HTTPS)",
+  [ERROR_CODES.WEBAUTHN.INVALID_CREDENTIAL]: "Invalid WebAuthn credential",
+  [ERROR_CODES.WEBAUTHN.NATIVE_MODULE_ERROR]: "Error in WebAuthn native module",
 
   [ERROR_CODES.SERVER.CREDENTIAL_EXISTS]: "Device already registered",
   [ERROR_CODES.SERVER.INVALID_CREDENTIAL]: "Invalid credential",
@@ -64,6 +93,11 @@ export const ERROR_MESSAGES = {
   [ERROR_CODES.SERVER.INVALID_CLIENT]: "Invalid client",
   [ERROR_CODES.SERVER.PASSKEYS_RETRIEVAL_FAILED]: "Failed to retrieve passkeys",
   [ERROR_CODES.SERVER.USER_NOT_FOUND]: "User not found",
+  [ERROR_CODES.SERVER.CHALLENGE_GENERATION_FAILED]:
+    "Failed to generate challenge",
+  [ERROR_CODES.SERVER.INVALID_CHALLENGE]: "Invalid challenge",
+  [ERROR_CODES.SERVER.EXPIRED_CHALLENGE]: "Challenge has expired",
+  [ERROR_CODES.SERVER.VERIFICATION_FAILED]: "WebAuthn verification failed",
 } as const;
 
 /**

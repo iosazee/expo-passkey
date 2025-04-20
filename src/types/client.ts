@@ -6,7 +6,6 @@
 import type { BetterAuthPlugin, User } from "better-auth/types";
 
 import type { BiometricSupportInfo } from "./passkey";
-import type { MobilePasskey } from "./server";
 
 /**
  * Client options for the Expo Passkey plugin
@@ -17,6 +16,12 @@ export interface ExpoPasskeyClientOptions {
    * @default '_better-auth'
    */
   storagePrefix?: string;
+
+  /**
+   * Timeout for WebAuthn operations in milliseconds
+   * @default 60000 (1 minute)
+   */
+  timeout?: number;
 }
 
 /**
@@ -26,6 +31,13 @@ export interface StorageKeys {
   DEVICE_ID: string;
   STATE: string;
   USER_ID: string;
+}
+
+/**
+ * Challenge response from the server
+ */
+export interface ChallengeResponse {
+  challenge: string;
 }
 
 /**
@@ -44,6 +56,28 @@ export interface FetchError {
   status: number;
   statusText: string;
   message?: string;
+}
+
+/**
+ * Native module registration options
+ */
+export interface NativeRegistrationOptions {
+  requestJson: string;
+}
+
+/**
+ * Native module authentication options
+ */
+export interface NativeAuthenticationOptions {
+  requestJson: string;
+}
+
+/**
+ * Result object for the getChallenge function
+ */
+export interface ChallengeResult {
+  data: ChallengeResponse | null;
+  error: Error | null;
 }
 
 /**
@@ -74,7 +108,20 @@ export interface AuthenticatePasskeyResult {
  * Response from listing passkeys endpoint
  */
 export interface ListPasskeysSuccessResponse {
-  passkeys: MobilePasskey[];
+  passkeys: Array<{
+    id: string;
+    userId: string;
+    credentialId: string;
+    platform: string;
+    lastUsed: string;
+    status: "active" | "revoked";
+    aaguid?: string;
+    createdAt: string;
+    updatedAt: string;
+    revokedAt?: string;
+    revokedReason?: string;
+    metadata: Record<string, unknown>;
+  }>;
   nextOffset?: number;
 }
 
@@ -99,7 +146,7 @@ export interface RevokePasskeyResult {
  */
 export interface PasskeyRegistrationCheckResult {
   isRegistered: boolean;
-  deviceId: string | null;
+  credentialIds: string[];
   biometricSupport: BiometricSupportInfo | null;
   error: Error | null;
 }
@@ -110,6 +157,10 @@ export interface PasskeyRegistrationCheckResult {
 export type ExpoPasskeyServerPlugin = BetterAuthPlugin & {
   id: "expo-passkey";
   endpoints: {
+    passkeyChallenges: {
+      path: "/expo-passkey/challenge";
+      response: { data: ChallengeResponse; error?: FetchError };
+    };
     registerPasskey: {
       path: "/expo-passkey/register";
       response: { data: RegisterPasskeySuccessResponse; error?: FetchError };

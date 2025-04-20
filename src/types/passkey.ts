@@ -48,7 +48,7 @@ export interface BiometricSupportInfo {
  * Device information
  */
 export interface DeviceInfo {
-  deviceId: string;
+  deviceId: string; // Added deviceId property
   platform: PasskeyPlatform;
   model: string | null;
   manufacturer: string | null;
@@ -76,4 +76,17 @@ export interface AuthOptions {
   disableDeviceFallback: boolean;
   fallbackLabel: string;
   requireConfirmation?: boolean;
+}
+
+/**
+ * WebAuthn support info
+ */
+export interface WebAuthnSupportInfo {
+  isSupported: boolean;
+  platformDetails: {
+    platform: string;
+    version: string | number;
+    apiLevel?: number | null;
+  };
+  error: string | null;
 }

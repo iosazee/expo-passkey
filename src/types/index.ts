@@ -7,3 +7,4 @@ export * from "./client";
 export * from "./errors";
 export * from "./passkey";
 export * from "./server";
+export * from "./webauthn";
