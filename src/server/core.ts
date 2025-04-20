@@ -36,6 +36,20 @@ export function clearCleanupIntervals(): void {
  * @returns BetterAuthPlugin instance
  */
 export const expoPasskey = (options: ExpoPasskeyOptions): BetterAuthPlugin => {
+  // Check for required dependencies
+  try {
+    // This is a runtime check to confirm that the dependecy is available.
+    require("@simplewebauthn/server");
+  } catch (error) {
+    throw new Error(
+      "Missing required dependency: @simplewebauthn/server\n" +
+        "This dependency is required for the server-side passkey implementation.\n" +
+        "Please install it with: npm install @simplewebauthn/server\n\n" +
+        "Original error: " +
+        (error instanceof Error ? error.message : String(error)),
+    );
+  }
+
   // Initialize logger
   const logger = createLogger(options.logger);
 
