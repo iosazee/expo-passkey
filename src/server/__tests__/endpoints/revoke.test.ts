@@ -22,7 +22,7 @@ describe("revokePasskey endpoint", () => {
   const mockCtx = {
     body: {
       userId: "user-123",
-      deviceId: "device-123",
+      credentialId: "device-123",
       reason: "lost_device",
     },
     context: {
@@ -59,7 +59,7 @@ describe("revokePasskey endpoint", () => {
     expect(mockCtx.context.adapter.findOne).toHaveBeenCalledWith({
       model: "mobilePasskey",
       where: [
-        { field: "deviceId", operator: "eq", value: "device-123" },
+        { field: "credentialId", operator: "eq", value: "device-123" },
         { field: "userId", operator: "eq", value: "user-123" },
         { field: "status", operator: "eq", value: "active" },
       ],
@@ -137,7 +137,7 @@ describe("revokePasskey endpoint", () => {
     expect(mockCtx.context.adapter.findOne).toHaveBeenCalledWith({
       model: "mobilePasskey",
       where: [
-        { field: "deviceId", operator: "eq", value: "device-123" },
+        { field: "credentialId", operator: "eq", value: "device-123" },
         { field: "userId", operator: "eq", value: "user-123" },
         { field: "status", operator: "eq", value: "active" },
       ],

@@ -34,7 +34,18 @@ A Better Auth plugin enabling secure, passwordless authentication in Expo applic
 
 Expo Passkey bridges the gap between Better Auth's backend capabilities and native biometric authentication on mobile devices. It allows your users to authenticate securely using Face ID, Touch ID, or fingerprint recognition without passwords, providing a modern, frictionless authentication experience.
 
-This plugin implements FIDO2-inspired passkey authentication by connecting Better Auth's backend infrastructure with Expo's client-side biometric capabilities, offering a complete end-to-end solution that you can integrate with minimal configuration.
+This plugin implements WebAuthn-compliant passkey authentication by connecting Better Auth's backend infrastructure with native platform APIs (Apple's PassKeys and Android's Credential Manager), offering a complete end-to-end solution that you can integrate with minimal configuration.
+
+### WebAuthn Integration
+
+This package implements the WebAuthn (Web Authentication) standard for passkeys, providing:
+
+- Full compliance with the WebAuthn specification
+- Native integration with platform-specific APIs:
+  - iOS: Uses Apple's ASAuthorizationPlatformPublicKeyCredentialProvider for secure passkey management
+  - Android: Leverages the AndroidX Credentials API for credential management
+- Support for both platform authenticators (biometrics) and cross-platform authenticators
+- Proper credential storage and management with all security best practices
 
 ## Key Features
 

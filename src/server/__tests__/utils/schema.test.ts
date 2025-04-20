@@ -11,7 +11,17 @@ describe("Schema definitions", () => {
     it("should validate correct data", () => {
       const validData = {
         userId: "user-123",
-        deviceId: "device-123",
+        credential: {
+          id: "credential-123",
+          rawId: "raw-credential-123",
+          response: {
+            clientDataJSON: "json-data",
+            attestationObject: "attestation-object",
+            transports: ["internal"],
+          },
+          type: "public-key",
+          authenticatorAttachment: "platform",
+        },
         platform: "ios",
         metadata: {
           deviceName: "iPhone 14",
@@ -29,7 +39,15 @@ describe("Schema definitions", () => {
     it("should allow minimal data", () => {
       const minimalData = {
         userId: "user-123",
-        deviceId: "device-123",
+        credential: {
+          id: "credential-123",
+          rawId: "raw-credential-123",
+          response: {
+            clientDataJSON: "json-data",
+            attestationObject: "attestation-object",
+          },
+          type: "public-key",
+        },
         platform: "ios",
         // No metadata
       };
@@ -42,7 +60,6 @@ describe("Schema definitions", () => {
       // Missing required fields
       const invalidData1 = {
         userId: "user-123",
-        // Missing deviceId
         platform: "ios",
       };
 
@@ -52,7 +69,15 @@ describe("Schema definitions", () => {
       // Invalid metadata type
       const invalidData2 = {
         userId: "user-123",
-        deviceId: "device-123",
+        credential: {
+          id: "credential-123",
+          rawId: "raw-credential-123",
+          response: {
+            clientDataJSON: "json-data",
+            attestationObject: "attestation-object",
+          },
+          type: "public-key",
+        },
         platform: "ios",
         metadata: "not-an-object", // Should be an object
       };
@@ -65,7 +90,17 @@ describe("Schema definitions", () => {
   describe("authenticatePasskeySchema", () => {
     it("should validate correct data", () => {
       const validData = {
-        deviceId: "device-123",
+        credential: {
+          id: "credential-123",
+          rawId: "raw-credential-123",
+          response: {
+            clientDataJSON: "json-data",
+            authenticatorData: "authenticator-data",
+            signature: "signature",
+            userHandle: "user-123"
+          },
+          type: "public-key",
+        },
         metadata: {
           lastLocation: "mobile-app",
           appVersion: "1.0.0",
@@ -81,8 +116,16 @@ describe("Schema definitions", () => {
 
     it("should allow minimal data", () => {
       const minimalData = {
-        deviceId: "device-123",
-        // No metadata
+        credential: {
+          id: "credential-123",
+          rawId: "raw-credential-123",
+          response: {
+            clientDataJSON: "json-data",
+            authenticatorData: "authenticator-data",
+            signature: "signature",
+          },
+          type: "public-key",
+        },
       };
 
       const result = authenticatePasskeySchema.safeParse(minimalData);
@@ -90,9 +133,8 @@ describe("Schema definitions", () => {
     });
 
     it("should reject invalid data", () => {
-      // Missing required fields
+      // Missing credential
       const invalidData = {
-        // Missing deviceId
         metadata: {
           lastLocation: "mobile-app",
         },
@@ -103,50 +145,11 @@ describe("Schema definitions", () => {
     });
   });
 
-  describe("listPasskeysQuerySchema", () => {
-    it("should validate correct query parameters", () => {
-      const validQuery = {
-        limit: "10",
-        offset: "20",
-      };
-
-      const result = listPasskeysQuerySchema.safeParse(validQuery);
-      expect(result.success).toBe(true);
-    });
-
-    it("should allow empty query parameters", () => {
-      const emptyQuery = {};
-
-      const result = listPasskeysQuerySchema.safeParse(emptyQuery);
-      expect(result.success).toBe(true);
-    });
-  });
-
-  describe("listPasskeysParamsSchema", () => {
-    it("should validate correct parameters", () => {
-      const validParams = {
-        userId: "user-123",
-      };
-
-      const result = listPasskeysParamsSchema.safeParse(validParams);
-      expect(result.success).toBe(true);
-    });
-
-    it("should reject missing userId", () => {
-      const invalidParams = {
-        // Missing userId
-      };
-
-      const result = listPasskeysParamsSchema.safeParse(invalidParams);
-      expect(result.success).toBe(false);
-    });
-  });
-
   describe("revokePasskeySchema", () => {
     it("should validate correct data", () => {
       const validData = {
         userId: "user-123",
-        deviceId: "device-123",
+        credentialId: "credential-123",
         reason: "lost_device",
       };
 
@@ -157,8 +160,7 @@ describe("Schema definitions", () => {
     it("should allow omitting reason", () => {
       const dataWithoutReason = {
         userId: "user-123",
-        deviceId: "device-123",
-        // No reason
+        credentialId: "credential-123",
       };
 
       const result = revokePasskeySchema.safeParse(dataWithoutReason);
@@ -168,13 +170,13 @@ describe("Schema definitions", () => {
     it("should reject missing required fields", () => {
       // Missing userId
       const invalidData1 = {
-        deviceId: "device-123",
+        credentialId: "credential-123",
       };
 
       const result1 = revokePasskeySchema.safeParse(invalidData1);
       expect(result1.success).toBe(false);
 
-      // Missing deviceId
+      // Missing credentialId
       const invalidData2 = {
         userId: "user-123",
       };
@@ -182,5 +184,54 @@ describe("Schema definitions", () => {
       const result2 = revokePasskeySchema.safeParse(invalidData2);
       expect(result2.success).toBe(false);
     });
+  });
+
+  describe("listPasskeysParamsSchema", () => {
+    it("should validate correct params", () => {
+      const validParams = {
+        userId: "user-123",
+      };
+
+      const result = listPasskeysParamsSchema.safeParse(validParams);
+      expect(result.success).toBe(true);
+    });
+
+    it("should reject invalid params", () => {
+      const invalidParams = {
+        userId: 123, // Should be string
+      };
+
+      const result = listPasskeysParamsSchema.safeParse(invalidParams);
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe("listPasskeysQuerySchema", () => {
+    it("should validate correct query params", () => {
+      const validQuery = {
+        limit: "10",
+        offset: "20",
+      };
+
+      const result = listPasskeysQuerySchema.safeParse(validQuery);
+      expect(result.success).toBe(true);
+    });
+
+    it("should allow empty query params", () => {
+      const emptyQuery = {};
+
+      const result = listPasskeysQuerySchema.safeParse(emptyQuery);
+      expect(result.success).toBe(true);
+    });
+
+    it("should allow partial query params", () => {
+      const partialQuery = {
+        limit: "10",
+      };
+
+      const result = listPasskeysQuerySchema.safeParse(partialQuery);
+      expect(result.success).toBe(true);
+    });
+
   });
 });

@@ -110,7 +110,7 @@ describe("listPasskeys endpoint", () => {
 
     // Verify debug logging
     expect(mockLogger.debug).toHaveBeenCalledWith(
-      "Server received passkey list request:",
+      "Passkey list request received:",
       expect.any(Object),
     );
     expect(mockLogger.debug).toHaveBeenCalledWith(
@@ -230,7 +230,7 @@ describe("listPasskeys endpoint", () => {
 
     // Verify error was logged
     expect(mockLogger.error).toHaveBeenCalledWith(
-      "Server error in listPasskeys:",
+      "Error listing passkeys:",
       expect.any(Error),
     );
   });

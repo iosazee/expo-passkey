@@ -20,7 +20,7 @@ export interface ExpoPasskeyOptions {
    * For mobile apps using passkeys, this should include app origins like:
    * android:apk-key-hash:{base64url-encoded-hash}
    */
-  origin: string | string[];
+  origin?: string | string[];
 
   /** Rate limiting configuration */
   rateLimit?: {

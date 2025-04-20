@@ -7,71 +7,20 @@ import { mobilePasskeySchema } from "../../../types";
 
 describe("MobilePasskey Schema Tests", () => {
   describe("mobilePasskeySchema validation", () => {
-    // Test the default function for createdAt
-    it("should apply default Date function for createdAt when missing", () => {
+
+    // Test the default value for status
+    it("should apply default value 'active' for status when missing", () => {
       const passkey = {
         id: "passkey-123",
         userId: "user-123",
-        deviceId: "device-123",
-        platform: "ios",
-        lastUsed: "2023-01-01T00:00:00Z",
-        status: "active" as const,
-        // No createdAt
-        updatedAt: new Date(),
-      };
-
-      const result = mobilePasskeySchema.safeParse(passkey);
-      expect(result.success).toBe(true);
-
-      if (result.success) {
-        // Verify the default function created a Date
-        expect(result.data.createdAt).toBeInstanceOf(Date);
-
-        // Should be a recent date (within the last second)
-        const now = new Date();
-        const diff = now.getTime() - result.data.createdAt.getTime();
-        expect(diff).toBeLessThan(1000);
-      }
-    });
-
-    // Test the default function for updatedAt
-    it("should apply default Date function for updatedAt when missing", () => {
-      const passkey = {
-        id: "passkey-123",
-        userId: "user-123",
-        deviceId: "device-123",
-        platform: "ios",
-        lastUsed: "2023-01-01T00:00:00Z",
-        status: "active" as const,
-        createdAt: new Date(),
-        // No updatedAt
-      };
-
-      const result = mobilePasskeySchema.safeParse(passkey);
-      expect(result.success).toBe(true);
-
-      if (result.success) {
-        // Verify the default function created a Date
-        expect(result.data.updatedAt).toBeInstanceOf(Date);
-
-        // Should be a recent date (within the last second)
-        const now = new Date();
-        const diff = now.getTime() - result.data.updatedAt.getTime();
-        expect(diff).toBeLessThan(1000);
-      }
-    });
-
-    // Test status default function
-    it("should apply default active value for status when missing", () => {
-      const passkey = {
-        id: "passkey-123",
-        userId: "user-123",
-        deviceId: "device-123",
+        credentialId: "credential-123",
+        publicKey: "public-key-data",
+        counter: 0,
         platform: "ios",
         lastUsed: "2023-01-01T00:00:00Z",
         // No status
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
 
       const result = mobilePasskeySchema.safeParse(passkey);
@@ -83,26 +32,50 @@ describe("MobilePasskey Schema Tests", () => {
       }
     });
 
-    // Test multiple defaults at once
-    it("should apply all defaults simultaneously when fields are missing", () => {
-      const minimalPasskey = {
+
+    // Verify required fields
+    it("should reject when required fields are missing", () => {
+      // Missing userId
+      const missingUserId = {
         id: "passkey-123",
-        userId: "user-123",
-        deviceId: "device-123",
+        // No userId
+        credentialId: "credential-123",
+        publicKey: "public-key-data",
+        counter: 0,
         platform: "ios",
         lastUsed: "2023-01-01T00:00:00Z",
-        // Missing status, createdAt, updatedAt
       };
 
-      const result = mobilePasskeySchema.safeParse(minimalPasskey);
-      expect(result.success).toBe(true);
+      const result1 = mobilePasskeySchema.safeParse(missingUserId);
+      expect(result1.success).toBe(false);
 
-      if (result.success) {
-        // Verify all defaults were applied
-        expect(result.data.status).toBe("active");
-        expect(result.data.createdAt).toBeInstanceOf(Date);
-        expect(result.data.updatedAt).toBeInstanceOf(Date);
-      }
+      // Missing credentialId
+      const missingCredentialId = {
+        id: "passkey-123",
+        userId: "user-123",
+        // No credentialId
+        publicKey: "public-key-data",
+        counter: 0,
+        platform: "ios",
+        lastUsed: "2023-01-01T00:00:00Z",
+      };
+
+      const result2 = mobilePasskeySchema.safeParse(missingCredentialId);
+      expect(result2.success).toBe(false);
+      
+      // Missing publicKey
+      const missingPublicKey = {
+        id: "passkey-123",
+        userId: "user-123",
+        credentialId: "credential-123",
+        // No publicKey
+        counter: 0,
+        platform: "ios",
+        lastUsed: "2023-01-01T00:00:00Z",
+      };
+
+      const result3 = mobilePasskeySchema.safeParse(missingPublicKey);
+      expect(result3.success).toBe(false);
     });
   });
 });

@@ -21,13 +21,14 @@ describe("server/endpoints module exports", () => {
     expect(endpointExports.createRevokeEndpoint).toBe(revoke);
   });
 
-  it("should export exactly the four endpoint creators", () => {
+  it("should export the five endpoint creators", () => {
     expect(Object.keys(endpointExports).sort()).toEqual(
       [
         "createRegisterEndpoint",
         "createAuthenticateEndpoint",
         "createListEndpoint",
         "createRevokeEndpoint",
+        "createChallengeEndpoint",
       ].sort(),
     );
   });

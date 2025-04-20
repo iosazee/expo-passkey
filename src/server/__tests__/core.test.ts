@@ -5,6 +5,11 @@ import { createLogger, createRateLimits, setupCleanupJob } from "../utils";
 
 // Mock dependencies
 jest.mock("../endpoints", () => ({
+  createChallengeEndpoint: jest.fn().mockReturnValue({
+    path: "/expo-passkey/challenge",
+    options: {},
+    handler: jest.fn(),
+  }),
   createRegisterEndpoint: jest.fn().mockReturnValue({
     path: "/expo-passkey/register",
     options: {},
@@ -101,6 +106,7 @@ describe("expoPasskey server plugin", () => {
   const validOptions = {
     rpName: "Test App",
     rpId: "example.com",
+    origin: "https://example.com",
     logger: {
       enabled: false,
     },
@@ -128,6 +134,7 @@ describe("expoPasskey server plugin", () => {
     expect(plugin.schema).toBeDefined();
     expect(plugin.schema.mobilePasskey).toBeDefined();
     expect(plugin.endpoints).toBeDefined();
+    expect(plugin.endpoints.passkeyChallenges).toBeDefined();
     expect(plugin.endpoints.registerPasskey).toBeDefined();
     expect(plugin.endpoints.authenticatePasskey).toBeDefined();
     expect(plugin.endpoints.listPasskeys).toBeDefined();
@@ -138,15 +145,15 @@ describe("expoPasskey server plugin", () => {
   it("should throw error if required options are missing", () => {
     // @ts-expect-error - intentionally passing invalid options
     expect(() => expoPasskey({})).toThrow(
-      "rpName and rpId are required options",
+      "rpName, rpId, and origin are required options",
     );
     // @ts-expect-error - intentionally passing invalid options
     expect(() => expoPasskey({ rpName: "Test App" })).toThrow(
-      "rpName and rpId are required options",
+      "rpName, rpId, and origin are required options",
     );
     // @ts-expect-error - intentionally passing invalid options
     expect(() => expoPasskey({ rpId: "example.com" })).toThrow(
-      "rpName and rpId are required options",
+      "rpName, rpId, and origin are required options",
     );
   });
 
@@ -186,9 +193,11 @@ describe("expoPasskey server plugin", () => {
 
     // Get field keys from MobilePasskey type, excluding the 'id' which is auto-generated
     type MobilePasskeySchemaFields = Omit<MobilePasskey, "id">;
-    const expectedFields: Array<keyof MobilePasskeySchemaFields> = [
+    const expectedFields: Array<keyof MobilePasskeySchemaFields | string> = [
       "userId",
-      "deviceId",
+      "credentialId",
+      "publicKey",
+      "counter",
       "platform",
       "lastUsed",
       "status",
@@ -197,6 +206,7 @@ describe("expoPasskey server plugin", () => {
       "revokedAt",
       "revokedReason",
       "metadata",
+      "aaguid",
     ];
 
     // Verify each field exists in the schema
@@ -210,7 +220,7 @@ describe("expoPasskey server plugin", () => {
       field: "id",
       onDelete: "cascade",
     });
-    expect(schema.fields.deviceId.unique).toBe(true);
+    expect(schema.fields.credentialId.unique).toBe(true);
     expect(schema.fields.status.defaultValue).toBe("active");
   });
 

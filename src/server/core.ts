@@ -19,6 +19,17 @@ import {
 } from "./endpoints";
 import { createLogger, createRateLimits, setupCleanupJob } from "./utils";
 
+// Store cleanup intervals globally so they can be cleared in tests
+const cleanupIntervals: NodeJS.Timeout[] = [];
+
+/**
+ * Clears all cleanup intervals
+ */
+export function clearCleanupIntervals(): void {
+  cleanupIntervals.forEach((interval) => clearInterval(interval));
+  cleanupIntervals.length = 0;
+}
+
 /**
  * Creates an instance of the Expo Passkey server plugin with WebAuthn support
  * @param options Configuration options for the plugin
@@ -171,7 +182,10 @@ export const expoPasskey = (options: ExpoPasskeyOptions): BetterAuthPlugin => {
 
       // 1. Cleanup for inactive passkeys
       if (options.cleanup?.inactiveDays) {
-        setupCleanupJob(ctx, options.cleanup, logger);
+        const cleanupInterval = setupCleanupJob(ctx, options.cleanup, logger);
+        if (cleanupInterval) {
+          cleanupIntervals.push(cleanupInterval);
+        }
       }
 
       // 2. Cleanup for expired challenges
@@ -194,7 +208,10 @@ export const expoPasskey = (options: ExpoPasskeyOptions): BetterAuthPlugin => {
 
       // Run challenge cleanup immediately and then every hour
       cleanupExpiredChallenges();
-      setInterval(cleanupExpiredChallenges, 60 * 60 * 1000);
+
+      // Store the interval so it can be cleared in tests
+      const intervalId = setInterval(cleanupExpiredChallenges, 60 * 60 * 1000);
+      cleanupIntervals.push(intervalId);
     },
 
     // Middleware for all expo-passkey endpoints

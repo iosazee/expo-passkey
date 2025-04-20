@@ -88,7 +88,7 @@ export const createAuthenticateEndpoint = (options: {
     },
     async (ctx) => {
       const { credential, metadata } = ctx.body;
-      const credentialId = credential.id;
+      const credentialId = credential?.id;
 
       try {
         logger.debug("WebAuthn authentication attempt:", { credentialId });
