@@ -1,6 +1,6 @@
 {
   "name": "expo-passkey",
-  "version": "0.1.0-beta.20",
+  "version": "0.1.0-alpha.1",
   "type": "module",
   "description": "Passkey authentication for Expo apps with Better Auth integration",
   "author": "Zee Mudia",
@@ -30,7 +30,10 @@
   "types": "dist/index.d.ts",
   "expo": {
     "name": "expo-passkey",
-    "platforms": ["ios", "android"]
+    "platforms": [
+      "ios",
+      "android"
+    ]
   },
   "exports": {
     ".": {
