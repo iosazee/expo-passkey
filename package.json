@@ -76,7 +76,7 @@
     "ios",
     "LICENSE",
     "README.md",
-    "scripts",
+    "scripts/check-server-deps.cjs",
     "CHANGELOG.md"
   ],
   "sideEffects": false,

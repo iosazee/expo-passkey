@@ -45,4 +45,5 @@ out/
 .expo/
 .expo-shared/
 
-
+# Test scripts
+scripts/test-check-server-deps.cjs

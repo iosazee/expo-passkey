@@ -1,74 +1,32 @@
+#!/usr/bin/env node
 /**
  * This script checks if @simplewebauthn/server is installed when used in a server environment.
- * It's designed to work in both ESM and CommonJS environments.
+ * Special handling for modern fullstack frameworks (NextJS, Remix, SvelteKit, etc.)
  */
 
-// Using CommonJS modules for wider compatibility
 const fs = require("fs");
 const path = require("path");
 
-// Function to check if we're in an Expo/React Native project
-function isClientEnvironment() {
-  try {
-    // Check for common React Native/Expo files in the project
-    const possibleClientFiles = [
-      "app.json",
-      "metro.config.js",
-      "App.tsx",
-      "App.jsx",
-      "app/_layout.tsx",
-    ];
+// Enable debug mode with PASSKEY_DEBUG=1
+const DEBUG = process.env.PASSKEY_DEBUG === "1";
 
-    // Get the project root (outside node_modules)
-    let projectRoot = process.cwd();
-    if (projectRoot.includes("node_modules")) {
-      projectRoot = projectRoot.split("node_modules")[0];
-    }
+// Allow direct configuration with PASSKEY_CHECK_SERVER=0 to disable or PASSKEY_CHECK_SERVER=1 to force
+const FORCE_CHECK = process.env.PASSKEY_CHECK_SERVER === "1";
+const SKIP_CHECK = process.env.PASSKEY_CHECK_SERVER === "0";
 
-    // Check if any of the client-specific files exist
-    const hasClientFiles = possibleClientFiles.some((file) =>
-      fs.existsSync(path.join(projectRoot, file)),
-    );
-
-    // Also check for expo/react-native in package.json dependencies
-    let hasClientDeps = false;
-    try {
-      const packageJsonPath = path.join(projectRoot, "package.json");
-      if (fs.existsSync(packageJsonPath)) {
-        const packageJson = JSON.parse(
-          fs.readFileSync(packageJsonPath, "utf8"),
-        );
-        const allDeps = {
-          ...(packageJson.dependencies || {}),
-          ...(packageJson.devDependencies || {}),
-        };
-
-        hasClientDeps = Object.keys(allDeps).some(
-          (dep) => dep === "expo" || dep === "react-native",
-        );
-      }
-    } catch (e) {
-      // Silently fail package.json check
-    }
-
-    return (
-      hasClientFiles ||
-      hasClientDeps ||
-      // Also check env variables as a fallback
-      process.env.EXPO_PUBLIC_RUNTIME === "client" ||
-      process.env.REACT_NATIVE_ENV === "true" ||
-      process.env.REACT_NATIVE === "true"
-    );
-  } catch (e) {
-    // If any error occurs during detection, assume it's not a client environment
-    return false;
+function debug(...args) {
+  if (DEBUG) {
+    console.log("\x1b[36m[DEBUG]\x1b[0m", ...args);
   }
 }
 
+debug("Starting check-server-deps.cjs script");
+debug("Current working directory:", process.cwd());
+
 // Check if we're in the package's own directory
-const isOwnPackage = (() => {
+function isOwnPackageDirectory() {
   try {
-    // Check package name
+    // Check package name from env var
     if (process.env.npm_package_name === "expo-passkey") {
       return true;
     }
@@ -81,25 +39,250 @@ const isOwnPackage = (() => {
         const packageData = JSON.parse(
           fs.readFileSync(packageJsonPath, "utf8"),
         );
-        return packageData.name === "expo-passkey";
+        if (packageData.name === "expo-passkey") {
+          return true;
+        }
       }
     }
     return false;
   } catch (e) {
+    debug("Error in isOwnPackageDirectory:", e);
     return false;
   }
-})();
+}
 
-// Skip the check if we're in the package's own directory or a client-only environment
-if (!isOwnPackage && !isClientEnvironment()) {
+// Check if this is a pure client environment (no server components)
+function isPureClientEnvironment() {
+  if (SKIP_CHECK) {
+    debug("Skipping check due to PASSKEY_CHECK_SERVER=0");
+    return true; // Skip check
+  }
+
+  if (FORCE_CHECK) {
+    debug("Forcing check due to PASSKEY_CHECK_SERVER=1");
+    return false; // Force check
+  }
+
   try {
-    require.resolve("@simplewebauthn/server");
-    // ✅ Server dependency found, all good
+    // Get the project root (outside node_modules)
+    let projectRoot = process.cwd();
+    if (projectRoot.includes("node_modules")) {
+      projectRoot = projectRoot.split("node_modules")[0];
+    }
+
+    debug("Project root directory:", projectRoot);
+
+    // Check for package.json
+    const packageJsonPath = path.join(projectRoot, "package.json");
+    if (fs.existsSync(packageJsonPath)) {
+      const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+      const allDeps = {
+        ...(packageJson.dependencies || {}),
+        ...(packageJson.devDependencies || {}),
+      };
+
+      // Define known server/fullstack frameworks
+      const serverFrameworks = [
+        "next", // NextJS
+        "express", // Express
+        "fastify", // Fastify
+        "koa", // Koa
+        "nestjs", // NestJS
+        "@remix-run/node", // Remix
+        "@remix-run/express", // Remix with Express
+        "@sveltejs/kit", // SvelteKit
+        "vite-plugin-ssr", // Vite SSR plugin
+        "vite-plugin-pwa", // Vite PWA plugin (often server-rendered)
+        "@astrojs/node", // Astro with Node adapter
+        "@tanstack/react-router", // TanStack Router (can be used server-side)
+        "nuxt", // Nuxt.js
+        "gatsby", // Gatsby
+        "h3", // h3 (Nitro/Nuxt runtime)
+        "nitro", // Nitro
+        "solid-start", // SolidStart
+        "sveltekit-adapter-node", // SvelteKit node adapter
+        "astro-node-adapter", // Astro node adapter
+        "hono", // Hono framework
+      ];
+
+      // Check for meta frameworks
+      const hasServerFramework = serverFrameworks.some(
+        (framework) => !!allDeps[framework],
+      );
+
+      // Check for vite or other bundlers with SSR configurations
+      const hasVite = !!allDeps["vite"];
+      const hasViteConfig =
+        fs.existsSync(path.join(projectRoot, "vite.config.js")) ||
+        fs.existsSync(path.join(projectRoot, "vite.config.ts"));
+
+      // If we detect a fullstack framework, it needs server deps
+      if (hasServerFramework) {
+        const detected = serverFrameworks.filter((f) => !!allDeps[f]);
+        debug(`Fullstack framework detected: ${detected.join(", ")}`);
+        return false; // Needs server deps
+      }
+
+      // If project has Vite, check if it's likely a server-rendered app
+      if (hasVite && hasViteConfig) {
+        debug("Vite detected, checking for server rendering configuration");
+
+        // Try to read Vite config to check for SSR settings
+        try {
+          const viteConfigPath = fs.existsSync(
+            path.join(projectRoot, "vite.config.ts"),
+          )
+            ? path.join(projectRoot, "vite.config.ts")
+            : path.join(projectRoot, "vite.config.js");
+
+          if (fs.existsSync(viteConfigPath)) {
+            const viteConfig = fs.readFileSync(viteConfigPath, "utf8");
+            // Look for SSR configuration indications
+            if (
+              viteConfig.includes("ssr") ||
+              viteConfig.includes("server") ||
+              viteConfig.includes("prerender")
+            ) {
+              debug("Server rendering detected in Vite config");
+              return false; // Likely a server component, needs server deps
+            }
+          }
+        } catch (e) {
+          debug("Error reading Vite config:", e);
+          // Continue with other checks
+        }
+      }
+
+      // Check for only client-side frameworks
+      const isReactNative = !!allDeps["react-native"] || !!allDeps["expo"];
+
+      // If it's React Native without server frameworks, it's a pure client env
+      if (isReactNative && !hasServerFramework) {
+        debug("Pure React Native/Expo environment detected");
+        return true;
+      }
+    }
+
+    // Check for framework-specific server files
+    const serverDirectories = [
+      "pages/api", // Next.js API routes
+      "app/api", // Next.js App Router API routes
+      "api", // Common API directory
+      "server", // Common server directory
+      "backend", // Common backend directory
+      "app/routes", // Remix routes
+      "app/actions", // Remix/Next.js server actions
+      "src/routes", // SvelteKit routes
+      "functions", // Serverless functions
+      "src/server", // Common server code directory
+      "src/api", // Common API directory
+    ];
+
+    const serverFiles = [
+      "next.config.js", // Next.js
+      "next.config.mjs", // Next.js (ESM)
+      "remix.config.js", // Remix
+      "svelte.config.js", // SvelteKit
+      "server.js", // Generic server
+      "server.ts", // Generic server
+      "api.js", // Generic API
+      "api.ts", // Generic API
+      "astro.config.mjs", // Astro
+      "nuxt.config.js", // Nuxt
+      "nuxt.config.ts", // Nuxt
+      "netlify.toml", // Netlify (often with serverless functions)
+      "vercel.json", // Vercel (often with serverless functions)
+    ];
+
+    // Check for React Native/Expo files
+    const reactNativeFiles = [
+      "app.json", // Expo
+      "metro.config.js", // React Native
+      "App.tsx", // React Native
+      "App.jsx", // React Native
+      "app/_layout.tsx", // Expo Router
+    ];
+
+    // Check if any server directories exist
+    const hasServerDirs = serverDirectories.some((dir) => {
+      const dirPath = path.join(projectRoot, dir);
+      return fs.existsSync(dirPath) && fs.statSync(dirPath).isDirectory();
+    });
+
+    // Check if any server files exist
+    const hasServerFilesFlag = serverFiles.some((file) => {
+      return fs.existsSync(path.join(projectRoot, file));
+    });
+
+    // Check if any React Native files exist
+    const hasReactNativeFiles = reactNativeFiles.some((file) =>
+      fs.existsSync(path.join(projectRoot, file)),
+    );
+
+    debug("File detection:", {
+      hasServerDirs,
+      hasServerFilesFlag,
+      hasReactNativeFiles,
+    });
+
+    // If it has server directories or files, it's a server environment
+    if (hasServerDirs || hasServerFilesFlag) {
+      return false; // Needs server deps
+    }
+
+    // If it has React Native files but no server files, it's a pure client env
+    if (hasReactNativeFiles) {
+      return true;
+    }
+
+    // Default to assuming it needs server deps if we can't determine otherwise
+    return false;
+  } catch (e) {
+    debug("Error in isPureClientEnvironment:", e);
+    return false;
+  }
+}
+
+// Check if dependency is specifically installed in this project's node_modules
+function isDepInstalledLocally(depName) {
+  try {
+    // Get the project root (outside node_modules)
+    let projectRoot = process.cwd();
+    if (projectRoot.includes("node_modules")) {
+      projectRoot = projectRoot.split("node_modules")[0];
+    }
+
+    // Check if node_modules/@simplewebauthn/server exists in this directory
+    const depPath = path.join(projectRoot, "node_modules", depName);
+    const exists = fs.existsSync(depPath);
+    debug(
+      `Checking if ${depName} is installed locally in ${depPath}: ${exists}`,
+    );
+    return exists;
+  } catch (e) {
+    debug(`Error checking if ${depName} is installed:`, e);
+    return false;
+  }
+}
+
+// Main logic
+const isOwnPackage = isOwnPackageDirectory();
+const pureClientEnv = isPureClientEnvironment();
+
+// Skip the check only if we're in our own package or it's a pure client environment
+if (!isOwnPackage && !pureClientEnv) {
+  debug("Not skipping check - proceeding to verify @simplewebauthn/server");
+
+  // Check if the server dependency is installed locally in this project
+  if (isDepInstalledLocally("@simplewebauthn/server")) {
+    debug("@simplewebauthn/server found in local node_modules");
     console.log(
       "\x1b[32m%s\x1b[0m",
       "[expo-passkey] Server dependency found: @simplewebauthn/server ✓",
     );
-  } catch (e) {
+  } else {
+    debug("@simplewebauthn/server not found in local node_modules");
+
     // Determine package manager for a helpful message
     const userAgent = process.env.npm_config_user_agent || "";
     const isYarn = userAgent.includes("yarn");
@@ -109,8 +292,9 @@ if (!isOwnPackage && !isClientEnvironment()) {
     if (isYarn) installCmd = "yarn add @simplewebauthn/server";
     else if (isPnpm) installCmd = "pnpm add @simplewebauthn/server";
 
-    // Display warning
-    console.warn(
+    // IMPORTANT: Using console.log instead of console.warn so it appears in stdout
+    // for easier test capture. The color is still yellow to indicate a warning.
+    console.log(
       "\x1b[33m%s\x1b[0m", // Yellow
       `┌─────────────────────────────────────────────────────┐
 │ [expo-passkey] Server dependency missing!           │
@@ -118,9 +302,16 @@ if (!isOwnPackage && !isClientEnvironment()) {
 │ The server component requires:                      │
 │   ${installCmd.padEnd(45)}│
 │                                                     │
-│ If you're only using client features, you can       │
-│ safely ignore this warning.                         │
+│ This dependency is needed for fullstack frameworks  │
+│ like Next.js, Remix, SvelteKit and others.          │
 └─────────────────────────────────────────────────────┘`,
     );
   }
+} else {
+  debug(
+    "Skipping @simplewebauthn/server check:",
+    isOwnPackage
+      ? "Running in own package"
+      : "Pure client environment detected",
+  );
 }
