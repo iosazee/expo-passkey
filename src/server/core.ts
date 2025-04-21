@@ -40,8 +40,8 @@ export const expoPasskey = (options: ExpoPasskeyOptions): BetterAuthPlugin => {
   const logger = createLogger(options.logger);
 
   // Validate required options
-  if (!options.rpName || !options.rpId || !options.origin) {
-    throw new Error("rpName, rpId, and origin are required options");
+  if (!options.rpName || !options.rpId) {
+    throw new Error("rpName and rpId are required options");
   }
 
   // Configure endpoints with options

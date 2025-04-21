@@ -145,15 +145,15 @@ describe("expoPasskey server plugin", () => {
   it("should throw error if required options are missing", () => {
     // @ts-expect-error - intentionally passing invalid options
     expect(() => expoPasskey({})).toThrow(
-      "rpName, rpId, and origin are required options",
+      "rpName and rpId are required options",
     );
     // @ts-expect-error - intentionally passing invalid options
     expect(() => expoPasskey({ rpName: "Test App" })).toThrow(
-      "rpName, rpId, and origin are required options",
+      "rpName and rpId are required options",
     );
     // @ts-expect-error - intentionally passing invalid options
     expect(() => expoPasskey({ rpId: "example.com" })).toThrow(
-      "rpName, rpId, and origin are required options",
+      "rpName and rpId are required options",
     );
   });
 

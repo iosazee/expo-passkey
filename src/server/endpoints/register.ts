@@ -23,13 +23,17 @@ import type { MobilePasskey, PasskeyChallenge } from "~/types/server";
 export const createRegisterEndpoint = (options: {
   rpName: string;
   rpId: string;
-  origin: string | string[];
+  origin?: string | string[];
   logger: Logger;
 }) => {
   const { rpName, rpId, origin, logger } = options;
 
-  // Convert to array of origins for consistency
-  const expectedOrigins = Array.isArray(origin) ? origin : [origin];
+  // Convert to array of origins for consistency, or use empty array if undefined
+  const expectedOrigins = origin
+    ? Array.isArray(origin)
+      ? origin
+      : [origin]
+    : [];
 
   return createAuthEndpoint(
     "/expo-passkey/register",
