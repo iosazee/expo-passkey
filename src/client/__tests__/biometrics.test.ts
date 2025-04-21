@@ -256,7 +256,8 @@ describe("Biometrics Utilities", () => {
         isSupported: false,
         isEnrolled: false,
         authenticationType: "None",
-        error: "Android 6.0 (API 23) or higher required for biometric support",
+        // Update error message to match new implementation requirement
+        error: "Android 10 (API 29) or higher required for passkey support",
         platformDetails: {
           platform: "android",
           apiLevel: 22,

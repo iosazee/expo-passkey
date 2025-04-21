@@ -33,7 +33,19 @@ import {
   isNativePasskeySupported,
 } from "./native-module";
 import { checkBiometricSupport } from "./utils/biometrics";
-import { getDeviceInfo } from "./utils/device";
+import {
+  getDeviceInfo,
+  hasPasskeysRegistered,
+  hasUserPasskeysRegistered,
+} from "./utils/device";
+import {
+  storeCredentialId,
+  getCredentialMetadata,
+  updateCredentialLastUsed,
+  getUserCredentialIds,
+  removeCredentialId,
+  type CredentialMetadata,
+} from "./utils/storage";
 import {
   checkWebAuthnSupport,
   createAuthenticationOptions,
@@ -250,7 +262,7 @@ export const expoPasskeyClient = (options: ExpoPasskeyClientOptions = {}) => {
                     credential,
                     platform: deviceInfo.platform,
                     metadata: {
-                      deviceName: deviceInfo.model,
+                      deviceName: deviceInfo.model || undefined,
                       deviceModel: deviceInfo.model,
                       appVersion: deviceInfo.appVersion,
                       manufacturer: deviceInfo.manufacturer,
@@ -264,6 +276,38 @@ export const expoPasskeyClient = (options: ExpoPasskeyClientOptions = {}) => {
 
             // Check if response was successful
             if (registrationData) {
+              // Store the credential ID for local tracking
+              try {
+                // Extract credential ID from the credential response
+                const credentialId = credential.id;
+
+                // Create additional metadata for the credential
+                const credentialMetadata: Partial<CredentialMetadata> = {
+                  rpId: registrationData.rpId,
+                  deviceName: deviceInfo.model || undefined,
+                  displayName: data.displayName || data.userName,
+                };
+
+                // Store in secure storage
+                await storeCredentialId(
+                  credentialId,
+                  data.userId,
+                  client.getOptions(),
+                  credentialMetadata,
+                );
+
+                console.debug(
+                  "[ExpoPasskey] Stored credential after registration:",
+                  credentialId,
+                );
+              } catch (storageError) {
+                // Don't fail the registration if local storage fails
+                console.warn(
+                  "[ExpoPasskey] Failed to store credential ID, but registration was successful:",
+                  storageError,
+                );
+              }
+
               return { data: registrationData, error: null };
             }
 
@@ -308,39 +352,63 @@ export const expoPasskeyClient = (options: ExpoPasskeyClientOptions = {}) => {
             // Get device information for metadata
             const deviceInfo = await client.getDeviceInformation();
 
+            // Get locally stored credential IDs to help with authentication
+            let storedCredentials: Record<string, CredentialMetadata> = {};
+            let allowCredentials: Array<{ id: string; type: "public-key" }> =
+              [];
+
+            try {
+              storedCredentials = await getCredentialMetadata(
+                client.getOptions(),
+              );
+
+              // If userId is provided, only include credentials for that user
+              if (data?.userId) {
+                const userCredentialIds = await getUserCredentialIds(
+                  data.userId,
+                  client.getOptions(),
+                );
+                allowCredentials = userCredentialIds.map((id) => ({
+                  id,
+                  type: "public-key",
+                }));
+              } else {
+                // Otherwise include all credentials
+                allowCredentials = Object.keys(storedCredentials).map((id) => ({
+                  id,
+                  type: "public-key",
+                }));
+              }
+
+              console.debug(
+                `[ExpoPasskey] Using ${allowCredentials.length} stored credentials for authentication`,
+              );
+            } catch (storageError) {
+              console.warn(
+                "[ExpoPasskey] Failed to get stored credentials:",
+                storageError,
+              );
+              // Continue with empty allowCredentials - the platform will use discoverable credentials
+            }
+
             // If userId is provided, get challenge for that user
             // Otherwise, the native implementation will use a credential stored on the device
             let challenge = "";
+            const challengeUserId = data?.userId || "auto-discovery";
 
-            if (data?.userId) {
-              const challengeResult = await getChallenge({
-                userId: data.userId,
-                type: "authentication",
-              });
+            // Get a challenge from the server
+            const challengeResult = await getChallenge({
+              userId: challengeUserId,
+              type: "authentication",
+            });
 
-              if (!challengeResult.data) {
-                throw (
-                  challengeResult.error || new Error("Failed to get challenge")
-                );
-              }
-
-              challenge = challengeResult.data.challenge;
-            } else {
-              // For discoverable credentials, we still need to get a challenge,
-              // but we don't know the userId yet, so use a temporary identifier
-              const challengeResult = await getChallenge({
-                userId: "auto-discovery",
-                type: "authentication",
-              });
-
-              if (!challengeResult.data) {
-                throw (
-                  challengeResult.error || new Error("Failed to get challenge")
-                );
-              }
-
-              challenge = challengeResult.data.challenge;
+            if (!challengeResult.data) {
+              throw (
+                challengeResult.error || new Error("Failed to get challenge")
+              );
             }
+
+            challenge = challengeResult.data.challenge;
 
             // Create authentication options
             const authenticationOptions = createAuthenticationOptions(
@@ -349,7 +417,8 @@ export const expoPasskeyClient = (options: ExpoPasskeyClientOptions = {}) => {
               {
                 timeout: data?.timeout || client.getOptions().timeout,
                 userVerification: data?.userVerification || "required",
-                // allowCredentials is not needed for auto-discovery
+                allowCredentials:
+                  allowCredentials.length > 0 ? allowCredentials : undefined,
               },
             );
 
@@ -381,6 +450,38 @@ export const expoPasskeyClient = (options: ExpoPasskeyClientOptions = {}) => {
 
             // Check if response was successful
             if (authData) {
+              try {
+                // Update local credential storage
+                const credentialId = credential.id;
+
+                // If we already have this credential, update its last used time
+                if (storedCredentials[credentialId]) {
+                  await updateCredentialLastUsed(
+                    credentialId,
+                    client.getOptions(),
+                  );
+                } else if (authData.user?.id) {
+                  // If this is a new credential, store it
+                  const credentialMetadata: Partial<CredentialMetadata> = {
+                    displayName: authData.user.email || authData.user.id,
+                    deviceName: deviceInfo.model || undefined,
+                  };
+
+                  await storeCredentialId(
+                    credentialId,
+                    authData.user.id,
+                    client.getOptions(),
+                    credentialMetadata,
+                  );
+                }
+              } catch (storageError) {
+                console.warn(
+                  "[ExpoPasskey] Failed to update credential storage, but authentication was successful:",
+                  storageError,
+                );
+                // Continue anyway since authentication succeeded
+              }
+
               return { data: authData, error: null };
             }
 
@@ -444,6 +545,62 @@ export const expoPasskeyClient = (options: ExpoPasskeyClientOptions = {}) => {
 
             // Check if response was successful
             if (listData) {
+              // Sync passkeys with local storage
+              try {
+                const localCredentialIds = await getUserCredentialIds(
+                  data.userId,
+                  client.getOptions(),
+                );
+                const serverPasskeys = listData.passkeys;
+
+                for (const passkey of serverPasskeys) {
+                  // If we don't have this credential locally, store it
+                  if (!localCredentialIds.includes(passkey.credentialId)) {
+                    // Try to parse metadata
+                    let metadata: Record<string, string> = {};
+                    if (typeof passkey.metadata === "string") {
+                      try {
+                        metadata = JSON.parse(passkey.metadata);
+                      } catch (_e) {
+                        // Ignore parsing errors
+                      }
+                    } else if (
+                      passkey.metadata &&
+                      typeof passkey.metadata === "object"
+                    ) {
+                      metadata = passkey.metadata as Record<string, string>;
+                    }
+
+                    // Store the credential locally
+                    await storeCredentialId(
+                      passkey.credentialId,
+                      data.userId,
+                      client.getOptions(),
+                      {
+                        deviceName:
+                          metadata.deviceName ||
+                          metadata.deviceModel ||
+                          undefined,
+                        displayName: metadata.displayName || data.userId,
+                        lastUsedAt: passkey.lastUsed,
+                        registeredAt: passkey.createdAt,
+                      },
+                    );
+
+                    console.debug(
+                      "[ExpoPasskey] Synced server credential to local storage:",
+                      passkey.credentialId,
+                    );
+                  }
+                }
+              } catch (storageError) {
+                console.warn(
+                  "[ExpoPasskey] Failed to sync passkeys with local storage:",
+                  storageError,
+                );
+                // Continue anyway since listing succeeded
+              }
+
               return { data: listData, error: null };
             }
 
@@ -491,7 +648,25 @@ export const expoPasskeyClient = (options: ExpoPasskeyClientOptions = {}) => {
             });
 
             // Check if response was successful
-            if (revokeData) {
+            if (revokeData && revokeData.success) {
+              // Also remove from local storage
+              try {
+                await removeCredentialId(
+                  data.credentialId,
+                  client.getOptions(),
+                );
+                console.debug(
+                  "[ExpoPasskey] Removed revoked credential from local storage:",
+                  data.credentialId,
+                );
+              } catch (storageError) {
+                console.warn(
+                  "[ExpoPasskey] Failed to remove credential from local storage:",
+                  storageError,
+                );
+                // Continue anyway since server revocation succeeded
+              }
+
               return { data: revokeData, error: null };
             }
 
@@ -530,6 +705,32 @@ export const expoPasskeyClient = (options: ExpoPasskeyClientOptions = {}) => {
               };
             }
 
+            // First check local credential storage
+            let localCredentialIds: string[] = [];
+            try {
+              localCredentialIds = await getUserCredentialIds(
+                userId,
+                client.getOptions(),
+              );
+
+              // If we have local credentials, we can return immediately without server check
+              if (localCredentialIds.length > 0) {
+                return {
+                  isRegistered: true,
+                  credentialIds: localCredentialIds,
+                  biometricSupport,
+                  error: null,
+                };
+              }
+            } catch (storageError) {
+              console.warn(
+                "[ExpoPasskey] Failed to check local credentials:",
+                storageError,
+              );
+              // Continue with server check
+            }
+
+            // If no local credentials found, check with server
             const { data: passkeysData, error: passkeysError } =
               await $fetch<ListPasskeysSuccessResponse>(
                 `/expo-passkey/list/${userId}`,
@@ -556,6 +757,52 @@ export const expoPasskeyClient = (options: ExpoPasskeyClientOptions = {}) => {
             const credentialIds = passkeys.map(
               (pk: { credentialId: string }) => pk.credentialId,
             );
+
+            // Store any server-side credentials we didn't have locally
+            if (credentialIds.length > 0) {
+              try {
+                for (const cred of passkeys) {
+                  if (!localCredentialIds.includes(cred.credentialId)) {
+                    // Try to parse metadata
+                    let metadata: Record<string, string> = {};
+                    if (typeof cred.metadata === "string") {
+                      try {
+                        metadata = JSON.parse(cred.metadata);
+                      } catch (_e) {
+                        // Ignore parsing errors
+                      }
+                    } else if (
+                      cred.metadata &&
+                      typeof cred.metadata === "object"
+                    ) {
+                      metadata = cred.metadata as Record<string, string>;
+                    }
+
+                    // Store the credential locally
+                    await storeCredentialId(
+                      cred.credentialId,
+                      userId,
+                      client.getOptions(),
+                      {
+                        deviceName:
+                          metadata.deviceName ||
+                          metadata.deviceModel ||
+                          undefined,
+                        displayName: metadata.displayName || userId,
+                        lastUsedAt: cred.lastUsed,
+                        registeredAt: cred.createdAt,
+                      },
+                    );
+                  }
+                }
+              } catch (storageError) {
+                console.warn(
+                  "[ExpoPasskey] Failed to store server credentials locally:",
+                  storageError,
+                );
+                // Continue anyway
+              }
+            }
 
             return {
               isRegistered: credentialIds.length > 0,
@@ -603,7 +850,37 @@ export const expoPasskeyClient = (options: ExpoPasskeyClientOptions = {}) => {
             DEVICE_ID: `${prefix}.device_id`,
             STATE: `${prefix}.passkey_state`,
             USER_ID: `${prefix}.user_id`,
+            CREDENTIAL_IDS: `${prefix}.credential_ids`,
           };
+        },
+
+        /**
+         * Checks if this device has any registered passkeys
+         */
+        hasPasskeysRegistered: async (): Promise<boolean> => {
+          return hasPasskeysRegistered(client.getOptions());
+        },
+
+        /**
+         * Checks if a specific user has registered passkeys on this device
+         */
+        hasUserPasskeysRegistered: async (userId: string): Promise<boolean> => {
+          return hasUserPasskeysRegistered(userId, client.getOptions());
+        },
+
+        /**
+         * Helper function to remove a credential ID from local storage
+         */
+        removeLocalCredential: async (credentialId: string): Promise<void> => {
+          try {
+            await removeCredentialId(credentialId, client.getOptions());
+          } catch (error) {
+            console.error(
+              "[ExpoPasskey] Failed to remove credential ID:",
+              error,
+            );
+            throw error;
+          }
         },
       };
     },
@@ -618,7 +895,9 @@ export const expoPasskeyClient = (options: ExpoPasskeyClientOptions = {}) => {
           onError: async (context: ErrorContext) => {
             // Handle authentication errors
             if (context.response?.status === 401) {
-              console.warn("Authentication error in Expo Passkey plugin");
+              console.warn(
+                "[ExpoPasskey] Authentication error in Expo Passkey plugin",
+              );
             }
           },
         },
@@ -658,7 +937,7 @@ export const expoPasskeyClient = (options: ExpoPasskeyClientOptions = {}) => {
             };
           } catch (error) {
             // If error occurs, return original URL and options
-            console.warn("Could not add custom headers:", error);
+            console.warn("[ExpoPasskey] Could not add custom headers:", error);
             return { url, options };
           }
         },

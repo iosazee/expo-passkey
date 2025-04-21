@@ -15,6 +15,7 @@ describe("Storage utilities", () => {
         DEVICE_ID: "_better-auth.device_id",
         STATE: "_better-auth.passkey_state",
         USER_ID: "_better-auth.user_id",
+        CREDENTIAL_IDS: "_better-auth.credential_ids",
       });
     });
 
@@ -25,6 +26,7 @@ describe("Storage utilities", () => {
         DEVICE_ID: "_better-auth.device_id",
         STATE: "_better-auth.passkey_state",
         USER_ID: "_better-auth.user_id",
+        CREDENTIAL_IDS: "_better-auth.credential_ids",
       });
     });
 
@@ -39,6 +41,7 @@ describe("Storage utilities", () => {
         DEVICE_ID: "myapp.device_id",
         STATE: "myapp.passkey_state",
         USER_ID: "myapp.user_id",
+        CREDENTIAL_IDS: "myapp.credential_ids",
       });
     });
 
@@ -54,6 +57,7 @@ describe("Storage utilities", () => {
         DEVICE_ID: "_better-auth.device_id",
         STATE: "_better-auth.passkey_state",
         USER_ID: "_better-auth.user_id",
+        CREDENTIAL_IDS: "_better-auth.credential_ids",
       });
     });
 
@@ -68,6 +72,7 @@ describe("Storage utilities", () => {
         DEVICE_ID: "123.device_id",
         STATE: "123.passkey_state",
         USER_ID: "123.user_id",
+        CREDENTIAL_IDS: "123.credential_ids",
       });
     });
 
@@ -82,6 +87,7 @@ describe("Storage utilities", () => {
         DEVICE_ID: "app@special_chars.device_id",
         STATE: "app@special_chars.passkey_state",
         USER_ID: "app@special_chars.user_id",
+        CREDENTIAL_IDS: "app@special_chars.credential_ids",
       });
     });
 
@@ -96,6 +102,7 @@ describe("Storage utilities", () => {
         DEVICE_ID: "_better-auth.device_id",
         STATE: "_better-auth.passkey_state",
         USER_ID: "_better-auth.user_id",
+        CREDENTIAL_IDS: "_better-auth.credential_ids",
       });
     });
   });

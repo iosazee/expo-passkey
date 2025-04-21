@@ -130,7 +130,7 @@ export default defineConfig([
   {
     files: ["**/client/**/*.ts", "**/client/**/*.js"],
     rules: {
-      "no-console": ["warn", { allow: ["warn", "error"] }],
+      "no-console": ["warn", { allow: ["warn", "error", "debug"] }],
     },
   },
 

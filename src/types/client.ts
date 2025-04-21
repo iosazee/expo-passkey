@@ -31,6 +31,7 @@ export interface StorageKeys {
   DEVICE_ID: string;
   STATE: string;
   USER_ID: string;
+  CREDENTIAL_IDS: string;
 }
 
 /**

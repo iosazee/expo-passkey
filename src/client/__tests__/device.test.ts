@@ -1,6 +1,6 @@
 import * as biometricsModule from "../utils/biometrics";
 import {
-  clearDeviceId,
+  clearPasskeyData,
   generateFallbackDeviceId,
   getDeviceId,
   getDeviceInfo,
@@ -52,11 +52,11 @@ const mockLocalAuthentication = {
   },
 };
 
-// Default storage keys for consistency
 const DEFAULT_STORAGE_KEYS = {
   DEVICE_ID: "_better-auth.device_id",
   STATE: "_better-auth.passkey_state",
   USER_ID: "_better-auth.user_id",
+  CREDENTIAL_IDS: "_better-auth.credential_ids",
 };
 
 // This mocks the module loader
@@ -440,36 +440,53 @@ describe("Device Utilities", () => {
     });
   });
 
-  describe("clearDeviceId", () => {
-    test("clears device IDs with default prefix", async () => {
-      await clearDeviceId();
+  describe("clearPasskeyData", () => {
+    test("clears passkey data with default prefix", async () => {
+      await clearPasskeyData();
 
+      // Check that each key was deleted, regardless of order
       expect(mockSecureStore.deleteItemAsync).toHaveBeenCalledWith(
         "_better-auth.device_id",
       );
       expect(mockSecureStore.deleteItemAsync).toHaveBeenCalledWith(
-        "_better-auth.ANDROID_UNIQUE_ID",
+        "_better-auth.user_id",
       );
+      expect(mockSecureStore.deleteItemAsync).toHaveBeenCalledWith(
+        "_better-auth.passkey_state",
+      );
+      expect(mockSecureStore.deleteItemAsync).toHaveBeenCalledWith(
+        "_better-auth.credential_ids",
+      );
+
+      // Check the total number of calls if needed
+      expect(mockSecureStore.deleteItemAsync).toHaveBeenCalledTimes(5);
     });
 
-    test("clears device IDs with custom prefix", async () => {
+    test("clears passkey data with custom prefix", async () => {
       const customOptions = { storagePrefix: "custom-prefix" };
       const customKeys = {
         DEVICE_ID: "custom-prefix.device_id",
         STATE: "custom-prefix.passkey_state",
         USER_ID: "custom-prefix.user_id",
+        CREDENTIAL_IDS: "custom-prefix.credential_ids",
       };
 
       (storageModule.getStorageKeys as jest.Mock).mockReturnValue(customKeys);
 
-      await clearDeviceId(customOptions);
+      await clearPasskeyData(customOptions);
 
       expect(storageModule.getStorageKeys).toHaveBeenCalledWith(customOptions);
       expect(mockSecureStore.deleteItemAsync).toHaveBeenCalledWith(
         "custom-prefix.device_id",
       );
       expect(mockSecureStore.deleteItemAsync).toHaveBeenCalledWith(
-        "custom-prefix.ANDROID_UNIQUE_ID",
+        "custom-prefix.user_id",
+      );
+      expect(mockSecureStore.deleteItemAsync).toHaveBeenCalledWith(
+        "custom-prefix.passkey_state",
+      );
+      expect(mockSecureStore.deleteItemAsync).toHaveBeenCalledWith(
+        "custom-prefix.credential_ids",
       );
     });
 
@@ -480,7 +497,7 @@ describe("Device Utilities", () => {
       );
 
       // The key test is that this should not throw an error
-      await expect(clearDeviceId()).resolves.not.toThrow();
+      await expect(clearPasskeyData()).resolves.not.toThrow();
 
       // Verify the function was actually called
       expect(mockSecureStore.deleteItemAsync).toHaveBeenCalled();
