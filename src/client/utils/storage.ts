@@ -4,6 +4,7 @@
  */
 
 import type { ExpoPasskeyClientOptions, StorageKeys } from "../../types/client";
+import { getSecureStore } from "./modules";
 
 /**
  * Credential metadata stored with each credential ID
@@ -51,7 +52,7 @@ export async function storeCredentialId(
   additionalMetadata: Partial<CredentialMetadata> = {},
 ): Promise<void> {
   try {
-    const { SecureStore } = require("expo-secure-store");
+    const SecureStore = getSecureStore();
     const KEYS = getStorageKeys(options);
 
     // Store the user ID
@@ -65,7 +66,7 @@ export async function storeCredentialId(
       try {
         credentials = JSON.parse(existingIdsStr);
       } catch (e) {
-        console.warn("Failed to parse stored credential IDs:", e);
+        console.warn("[ExpoPasskey] Failed to parse stored credential IDs:", e);
       }
     }
 
@@ -102,7 +103,7 @@ export async function getCredentialMetadata(
   options: ExpoPasskeyClientOptions = {},
 ): Promise<Record<string, CredentialMetadata>> {
   try {
-    const { SecureStore } = require("expo-secure-store");
+    const SecureStore = getSecureStore();
     const KEYS = getStorageKeys(options);
 
     const existingIdsStr = await SecureStore.getItemAsync(KEYS.CREDENTIAL_IDS);
@@ -155,7 +156,7 @@ export async function updateCredentialLastUsed(
   options: ExpoPasskeyClientOptions = {},
 ): Promise<void> {
   try {
-    const { SecureStore } = require("expo-secure-store");
+    const SecureStore = getSecureStore();
     const KEYS = getStorageKeys(options);
 
     // Get existing credential IDs
@@ -209,7 +210,7 @@ export async function removeCredentialId(
   options: ExpoPasskeyClientOptions = {},
 ): Promise<void> {
   try {
-    const { SecureStore } = require("expo-secure-store");
+    const SecureStore = getSecureStore();
     const KEYS = getStorageKeys(options);
 
     // Get existing credential IDs

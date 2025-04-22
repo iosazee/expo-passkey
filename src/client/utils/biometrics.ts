@@ -7,13 +7,7 @@ import type { AuthOptions, BiometricSupportInfo } from "../../types";
 import { ERROR_CODES, PasskeyError } from "../../types/errors";
 import { isSupportedPlatform } from "./environment";
 import { isNativePasskeySupported } from "../native-module";
-
 import { loadExpoModules } from "./modules";
-
-// Helper function to get modules only when needed
-function getModules() {
-  return loadExpoModules();
-}
 
 /**
  * Checks if biometric authentication is supported and available
@@ -21,7 +15,23 @@ function getModules() {
  */
 export async function checkBiometricSupport(): Promise<BiometricSupportInfo> {
   try {
-    const { LocalAuthentication, Platform, Device } = getModules();
+    const modules = loadExpoModules();
+    const { LocalAuthentication, Platform, Device } = modules;
+
+    // If LocalAuthentication module isn't available, biometrics aren't supported
+    if (!LocalAuthentication) {
+      return {
+        isSupported: false,
+        isEnrolled: false,
+        availableTypes: [],
+        authenticationType: "None",
+        error: "LocalAuthentication module not available",
+        platformDetails: {
+          platform: Platform.OS,
+          version: Platform.Version,
+        },
+      };
+    }
 
     const isSupported = await LocalAuthentication.hasHardwareAsync();
     const isEnrolled = await LocalAuthentication.isEnrolledAsync();
@@ -31,9 +41,11 @@ export async function checkBiometricSupport(): Promise<BiometricSupportInfo> {
     const platformDetails = {
       platform: Platform.OS,
       version: Platform.Version,
-      apiLevel: Platform.OS === "android" ? Device.platformApiLevel : undefined,
-      manufacturer: Platform.OS === "android" ? Device.manufacturer : undefined,
-      brand: Platform.OS === "android" ? Device.brand : undefined,
+      apiLevel:
+        Platform.OS === "android" ? Device?.platformApiLevel : undefined,
+      manufacturer:
+        Platform.OS === "android" ? Device?.manufacturer : undefined,
+      brand: Platform.OS === "android" ? Device?.brand : undefined,
     };
 
     // Platform-specific validation for passkey support
@@ -88,7 +100,12 @@ export async function checkBiometricSupport(): Promise<BiometricSupportInfo> {
       };
     }
 
-    const authenticationType = getBiometricType(availableTypes);
+    // Get the authenticationType using our updated function that now accepts both parameters
+    const authenticationType = getBiometricType(
+      availableTypes,
+      LocalAuthentication,
+      Platform,
+    );
 
     return {
       isSupported: isSupported && nativePasskeySupported,
@@ -99,7 +116,9 @@ export async function checkBiometricSupport(): Promise<BiometricSupportInfo> {
       platformDetails,
     };
   } catch (error) {
-    const { Platform } = getModules();
+    const modules = loadExpoModules();
+    const { Platform } = modules;
+
     return {
       isSupported: false,
       isEnrolled: false,
@@ -120,10 +139,41 @@ export async function checkBiometricSupport(): Promise<BiometricSupportInfo> {
 /**
  * Determines the type of biometric authentication available
  * @param types Available authentication types
+ * @param providedLocalAuthentication Optional LocalAuthentication module for testing
+ * @param providedPlatform Optional Platform for testing
  * @returns Human-readable biometric type
  */
-export function getBiometricType(types: number[]): string {
-  const { LocalAuthentication, Platform } = getModules();
+export function getBiometricType(
+  types: number[],
+  providedLocalAuthentication?:
+    | typeof import("expo-local-authentication")
+    | null,
+  providedPlatform?: typeof import("react-native").Platform,
+): string {
+  // For backward compatibility with tests
+  // If providedLocalAuthentication and providedPlatform are passed, use them
+  // Otherwise, try to load them from modules
+  let LocalAuthentication = providedLocalAuthentication;
+  let Platform = providedPlatform;
+
+  if (!LocalAuthentication || !Platform) {
+    try {
+      const modules = loadExpoModules();
+      if (!LocalAuthentication)
+        LocalAuthentication = modules.LocalAuthentication;
+      if (!Platform) Platform = modules.Platform;
+    } catch (error) {
+      console.warn(
+        "[ExpoPasskey] Failed to load modules for getBiometricType:",
+        error,
+      );
+      return "None";
+    }
+  }
+
+  if (!LocalAuthentication) {
+    return "None";
+  }
 
   if (Platform.OS === "ios") {
     return types.includes(
@@ -164,7 +214,15 @@ export function getBiometricType(types: number[]): string {
 export async function authenticateWithBiometrics(
   options: AuthOptions,
 ): Promise<boolean> {
-  const { LocalAuthentication } = getModules();
+  const modules = loadExpoModules();
+  const { LocalAuthentication } = modules;
+
+  if (!LocalAuthentication) {
+    throw new PasskeyError(
+      ERROR_CODES.BIOMETRIC.NOT_SUPPORTED,
+      "LocalAuthentication module not available",
+    );
+  }
 
   const result = await LocalAuthentication.authenticateAsync({
     promptMessage: options.promptMessage,
@@ -191,7 +249,8 @@ export async function authenticateWithBiometrics(
  */
 export async function isPasskeySupported(): Promise<boolean> {
   try {
-    const { Platform, Device } = getModules();
+    const modules = loadExpoModules();
+    const { Platform, Device } = modules;
 
     // First check if biometrics are supported and enrolled
     const biometricSupport = await checkBiometricSupport();
@@ -207,7 +266,7 @@ export async function isPasskeySupported(): Promise<boolean> {
       }
     } else if (Platform.OS === "android") {
       // Android 10+ (API 29+) required for passkey support
-      const apiLevel = Device.platformApiLevel;
+      const apiLevel = Device?.platformApiLevel;
       if (!apiLevel || !isSupportedPlatform(Platform.OS, apiLevel)) {
         return false;
       }
@@ -219,7 +278,7 @@ export async function isPasskeySupported(): Promise<boolean> {
     // Finally, check if native WebAuthn module is available
     return isNativePasskeySupported();
   } catch (error) {
-    console.error("Error checking passkey support:", error);
+    console.error("[ExpoPasskey] Error checking passkey support:", error);
     return false;
   }
 }

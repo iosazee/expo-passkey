@@ -7,18 +7,13 @@ import type { DeviceInfo, ExpoPasskeyClientOptions } from "../../types";
 import { ERROR_CODES, PasskeyError } from "../../types/errors";
 
 import { checkBiometricSupport } from "./biometrics";
-import { loadExpoModules } from "./modules";
+import { loadExpoModules, getSecureStore } from "./modules";
 import {
   getStorageKeys,
   getCredentialMetadata,
   getUserCredentialIds,
 } from "./storage";
 import { isNativePasskeySupported } from "../native-module";
-
-// Helper function to get modules only when needed
-function getModules() {
-  return loadExpoModules();
-}
 
 /**
  * Gets or generates a device identifier
@@ -34,7 +29,10 @@ export async function getDeviceId(
   generateIfMissing: boolean = true,
 ): Promise<string | null> {
   try {
-    const { Platform, Application, Device, SecureStore } = getModules();
+    // Load required modules
+    const modules = loadExpoModules();
+    const { Platform, Application, Device } = modules;
+    const SecureStore = getSecureStore();
     const KEYS = getStorageKeys(options);
 
     // First try to get from secure storage
@@ -64,6 +62,11 @@ export async function getDeviceId(
     // Platform-specific ID generation
     if (Platform.OS === "ios") {
       try {
+        // Check if Application module is available
+        if (!Application) {
+          throw new Error("expo-application module not available");
+        }
+
         const iosId = await Application.getIosIdForVendorAsync();
         if (iosId) {
           deviceId = iosId;
@@ -76,6 +79,11 @@ export async function getDeviceId(
       }
     } else if (Platform.OS === "android") {
       try {
+        // Check if Application module is available
+        if (!Application) {
+          throw new Error("expo-application module not available");
+        }
+
         const androidId = Application.getAndroidId();
         if (!androidId) {
           throw new Error("Android ID is empty or null");
@@ -104,18 +112,22 @@ export async function getDeviceId(
           try {
             const randomId = await generateFallbackDeviceId();
 
-            // Add device-specific information
-            const deviceInfo = {
-              brand: Device.brand || "",
-              modelName: Device.modelName || "",
-              osBuildId: Device.osBuildId || "",
-            };
+            // Add device-specific information if Device module is available
+            if (Device) {
+              const deviceInfo = {
+                brand: Device.brand || "",
+                modelName: Device.modelName || "",
+                osBuildId: Device.osBuildId || "",
+              };
 
-            // Combine random ID with device info
-            const infoString = Object.values(deviceInfo)
-              .filter(Boolean)
-              .join("-");
-            deviceId = infoString ? `${randomId}-${infoString}` : randomId;
+              // Combine random ID with device info
+              const infoString = Object.values(deviceInfo)
+                .filter(Boolean)
+                .join("-");
+              deviceId = infoString ? `${randomId}-${infoString}` : randomId;
+            } else {
+              deviceId = randomId;
+            }
 
             // Save for future use
             try {
@@ -182,23 +194,23 @@ export async function getDeviceId(
 }
 
 /**
- * Checks if this device has any registered passkeys by looking
- * at the credential metadata stored locally
+ * Checks if the device has any registered passkeys without requiring a specific user ID.
+ * This is particularly useful during login when a userId is not yet available.
  *
  * @param options Client options with storage prefix
- * @returns Promise resolving to boolean indicating if any passkeys are registered
+ * @returns Promise resolving to boolean indicating if any passkeys are registered on this device
  */
 export async function hasPasskeysRegistered(
   options: ExpoPasskeyClientOptions = {},
 ): Promise<boolean> {
   try {
+    // Get all credential metadata from storage
     const credentials = await getCredentialMetadata(options);
+
+    // Check if there are any credentials stored at all
     return Object.keys(credentials).length > 0;
   } catch (error) {
-    console.error(
-      "[ExpoPasskey] Error checking for registered passkeys:",
-      error,
-    );
+    console.error("[ExpoPasskey] Error checking for device passkeys:", error);
     return false;
   }
 }
@@ -253,30 +265,35 @@ export async function isDevicePasskeyCapable(): Promise<boolean> {
  */
 export async function generateFallbackDeviceId(): Promise<string> {
   try {
-    const { Platform, Crypto } = getModules();
+    const modules = loadExpoModules();
+    const { Platform, Crypto } = modules;
 
-    try {
-      const randomBytes = await Crypto.getRandomBytesAsync(16);
-      const deviceId = [...new Uint8Array(randomBytes)]
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("");
-      return `${Platform.OS}-${deviceId}`;
-    } catch (cryptoError) {
-      console.warn(
-        "[ExpoPasskey] Failed to generate random bytes:",
-        cryptoError,
-      );
-      // Fallback to Math.random if crypto fails
-      const randomParts = [];
-      for (let i = 0; i < 16; i++) {
-        randomParts.push(
-          Math.floor(Math.random() * 256)
-            .toString(16)
-            .padStart(2, "0"),
+    // If Crypto module is available, use it to generate random bytes
+    if (Crypto) {
+      try {
+        const randomBytes = await Crypto.getRandomBytesAsync(16);
+        const deviceId = [...new Uint8Array(randomBytes)]
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join("");
+        return `${Platform.OS}-${deviceId}`;
+      } catch (cryptoError) {
+        console.warn(
+          "[ExpoPasskey] Failed to generate random bytes:",
+          cryptoError,
         );
       }
-      return `${Platform.OS}-${randomParts.join("")}`;
     }
+
+    // Fallback to Math.random if crypto fails or is unavailable
+    const randomParts = [];
+    for (let i = 0; i < 16; i++) {
+      randomParts.push(
+        Math.floor(Math.random() * 256)
+          .toString(16)
+          .padStart(2, "0"),
+      );
+    }
+    return `${Platform.OS}-${randomParts.join("")}`;
   } catch (error) {
     console.error(
       "[ExpoPasskey] Failed to generate fallback device ID:",
@@ -301,7 +318,7 @@ export async function clearPasskeyData(
   options: ExpoPasskeyClientOptions = {},
 ): Promise<void> {
   try {
-    const { SecureStore } = getModules();
+    const SecureStore = getSecureStore();
     const KEYS = getStorageKeys(options);
     const androidUniqueIdKey = `${options.storagePrefix || "_better-auth"}.ANDROID_UNIQUE_ID`;
 
@@ -331,7 +348,8 @@ export async function getDeviceInfo(
   generateDeviceId: boolean = true,
 ): Promise<DeviceInfo> {
   try {
-    const { Platform, Device, Application } = getModules();
+    const modules = loadExpoModules();
+    const { Platform, Device, Application } = modules;
 
     // Get device ID
     let deviceId: string;
@@ -368,10 +386,10 @@ export async function getDeviceInfo(
     return {
       deviceId,
       platform: Platform.OS,
-      model: Device.modelName,
-      manufacturer: Device.manufacturer,
-      osVersion: Device.osVersion || Platform.Version.toString(),
-      appVersion: Application.nativeApplicationVersion || "1.0.0",
+      model: Device?.modelName || null,
+      manufacturer: Device?.manufacturer || null,
+      osVersion: Device?.osVersion || Platform.Version.toString(),
+      appVersion: Application?.nativeApplicationVersion || "1.0.0",
       biometricSupport,
     };
   } catch (error) {
