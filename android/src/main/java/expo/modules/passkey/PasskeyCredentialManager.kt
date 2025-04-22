@@ -41,7 +41,42 @@ class PasskeyCredentialManager(private val context: Context) {
      * @return true if passkeys are supported on this device
      */
     fun isSupported(): Boolean {
-        return Build.VERSION.SDK_INT >= 29 // Android 10+ (API 29+)
+        // According to Google's documentation, passkeys are supported on Android 9+ (API level 28+)
+        Log.d(TAG, "Checking passkey support - Android API level: ${Build.VERSION.SDK_INT}")
+        
+        // Android 14+ (API 34+) should always be supported
+        if (Build.VERSION.SDK_INT >= 34) {
+            Log.d(TAG, "Android 14+ detected, passkeys are supported")
+            return true
+        }
+        
+        // Android 9-13 (API 28-33) requires additional checks
+        if (Build.VERSION.SDK_INT >= 28) {
+            // Check if the credential manager can be initialized
+            try {
+                if (credentialManager != null || CredentialManager.create(context) != null) {
+                    Log.d(TAG, "CredentialManager initialized successfully")
+                    
+                    // Check if the device has necessary hardware features
+                    val packageManager = context.packageManager
+                    val hasBiometric = packageManager.hasSystemFeature("android.hardware.biometrics")
+                    val hasFingerprint = packageManager.hasSystemFeature("android.hardware.fingerprint")
+                    
+                    Log.d(TAG, "Biometric support: $hasBiometric, Fingerprint support: $hasFingerprint")
+                    
+                    // If any biometric capability is available, consider it supported
+                    if (hasBiometric || hasFingerprint) {
+                        return true
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error checking credential manager support: ${e.message}")
+            }
+        }
+        
+        // If we get here, passkeys are not supported
+        Log.d(TAG, "Passkeys not supported on this device")
+        return false
     }
 
     /**

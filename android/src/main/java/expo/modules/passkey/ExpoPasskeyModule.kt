@@ -33,9 +33,32 @@ class ExpoPasskeyModule : Module() {
     
     // Check if WebAuthn/passkeys are supported on this device
     Function("isPasskeySupported") {
-      val isSupported = credentialManager?.isSupported() ?: false
-      Log.d(TAG, "Passkey supported: $isSupported")
-      return@Function isSupported
+      try {
+        // Check Android version
+        val androidVersion = Build.VERSION.SDK_INT
+        Log.d(TAG, "Checking passkey support - Android API level: $androidVersion")
+        
+        // According to Google's documentation, passkeys are supported on Android 9+ (API level 28+)
+        if (androidVersion < 28) {
+          Log.d(TAG, "Passkey not supported - Android version too low (minimum required is Android 9/API 28)")
+          return@Function false
+        }
+        
+        // Always consider Android 14+ (API 34+) as supported
+        if (androidVersion >= 34) {
+          Log.d(TAG, "Android 14+ detected, assuming passkey support is available")
+          return@Function true
+        }
+        
+        // For Android 9-13, check credential manager
+        val isSupported = credentialManager?.isSupported() ?: false
+        Log.d(TAG, "Passkey supported via CredentialManager: $isSupported")
+        return@Function isSupported
+      } catch (e: Exception) {
+        // If there's any error in checking, log it and return false to be safe
+        Log.e(TAG, "Error checking passkey support: ${e.message}", e)
+        return@Function false
+      }
     }
     
     // Create a new passkey (Registration flow)

@@ -23,11 +23,13 @@ export async function checkBiometricSupport(): Promise<BiometricSupportInfo> {
   try {
     const { LocalAuthentication, Platform, Device } = getModules();
 
+    // Get basic hardware support info
     const isSupported = await LocalAuthentication.hasHardwareAsync();
     const isEnrolled = await LocalAuthentication.isEnrolledAsync();
     const availableTypes =
       await LocalAuthentication.supportedAuthenticationTypesAsync();
 
+    // Get platform details for debugging and feature detection
     const platformDetails = {
       platform: Platform.OS,
       version: Platform.Version,
@@ -36,58 +38,68 @@ export async function checkBiometricSupport(): Promise<BiometricSupportInfo> {
       brand: Platform.OS === "android" ? Device.brand : undefined,
     };
 
-    // Platform-specific validation for passkey support
-    if (Platform.OS === "ios") {
-      const version = parseInt(Platform.Version as string, 10);
-      if (version < 16) {
-        return {
-          isSupported: false,
-          isEnrolled: false,
-          availableTypes: [],
-          authenticationType: "None",
-          error: "iOS 16 or higher required for passkey support",
-          platformDetails,
-        };
-      }
-    } else if (Platform.OS === "android") {
-      // For passkeys, we need at least Android 10 (API 29)
-      if (!platformDetails.apiLevel || platformDetails.apiLevel < 29) {
-        return {
-          isSupported: false,
-          isEnrolled: false,
-          availableTypes: [],
-          authenticationType: "None",
-          error: "Android 10 (API 29) or higher required for passkey support",
-          platformDetails,
-        };
-      }
-    } else {
+    console.debug("[ExpoPasskey] Platform details:", platformDetails);
+    console.debug("[ExpoPasskey] Biometric hardware support:", isSupported);
+    console.debug("[ExpoPasskey] Biometric enrollment status:", isEnrolled);
+    console.debug("[ExpoPasskey] Available auth types:", availableTypes);
+
+    // Check if the platform meets version requirements using the utility function
+    if (
+      !isSupportedPlatform(
+        Platform.OS,
+        Platform.OS === "android"
+          ? platformDetails.apiLevel || Platform.Version
+          : Platform.Version,
+      )
+    ) {
+      console.debug(
+        "[ExpoPasskey] Platform/version not supported:",
+        Platform.OS,
+        Platform.Version,
+      );
       return {
         isSupported: false,
         isEnrolled: false,
         availableTypes: [],
         authenticationType: "None",
-        error: "Unsupported platform",
-        platformDetails: {
-          platform: Platform.OS,
-          version: Platform.Version,
-        },
+        error:
+          Platform.OS === "ios"
+            ? "iOS 16 or higher required for passkey support"
+            : "Android 9 (API 28) or higher required for passkey support",
+        platformDetails,
       };
     }
 
     // Check if native WebAuthn implementation is available
-    const nativePasskeySupported = await isNativePasskeySupported();
+    // This is the final check after platform requirements are met
+    let nativePasskeySupported = false;
+    try {
+      nativePasskeySupported = await isNativePasskeySupported();
+      console.debug(
+        "[ExpoPasskey] Native passkey support check result:",
+        nativePasskeySupported,
+      );
+    } catch (error) {
+      console.warn(
+        "[ExpoPasskey] Error checking native passkey support:",
+        error,
+      );
+      // Continue with false result
+    }
+
+    // If native module check fails, we still have incomplete information
     if (!nativePasskeySupported) {
       return {
         isSupported: false,
-        isEnrolled: false,
-        availableTypes: [],
-        authenticationType: "None",
+        isEnrolled: isEnrolled,
+        availableTypes,
+        authenticationType: getBiometricType(availableTypes),
         error: "Native passkey module not available or not supported",
         platformDetails,
       };
     }
 
+    // Determine the biometric type for user-friendly display
     const authenticationType = getBiometricType(availableTypes);
 
     return {
@@ -99,6 +111,7 @@ export async function checkBiometricSupport(): Promise<BiometricSupportInfo> {
       platformDetails,
     };
   } catch (error) {
+    console.error("[ExpoPasskey] Error in checkBiometricSupport:", error);
     const { Platform } = getModules();
     return {
       isSupported: false,
@@ -147,6 +160,12 @@ export function getBiometricType(types: number[]): string {
     if (types.includes(LocalAuthentication.AuthenticationType.IRIS)) {
       return "Iris";
     }
+
+    // Additional check - if we have types but none match specific ones,
+    // assume it's some form of biometric
+    if (types.length > 0) {
+      return "Biometric";
+    }
   }
 
   return "Biometric";
@@ -192,34 +211,66 @@ export async function authenticateWithBiometrics(
 export async function isPasskeySupported(): Promise<boolean> {
   try {
     const { Platform, Device } = getModules();
+    console.debug("[ExpoPasskey] Checking passkey support...");
 
     // First check if biometrics are supported and enrolled
-    const biometricSupport = await checkBiometricSupport();
-    if (!biometricSupport.isSupported || !biometricSupport.isEnrolled) {
+    let biometricSupport;
+    try {
+      biometricSupport = await checkBiometricSupport();
+      console.debug("[ExpoPasskey] Biometric support info:", {
+        isSupported: biometricSupport.isSupported,
+        isEnrolled: biometricSupport.isEnrolled,
+        authenticationType: biometricSupport.authenticationType,
+        error: biometricSupport.error,
+      });
+    } catch (error) {
+      console.error("[ExpoPasskey] Error checking biometric support:", error);
       return false;
     }
 
-    // Then check platform compatibility
-    if (Platform.OS === "ios") {
-      // iOS 16+ required for passkey support
-      if (!isSupportedPlatform(Platform.OS, Platform.Version)) {
-        return false;
-      }
-    } else if (Platform.OS === "android") {
-      // Android 10+ (API 29+) required for passkey support
-      const apiLevel = Device.platformApiLevel;
-      if (!apiLevel || !isSupportedPlatform(Platform.OS, apiLevel)) {
-        return false;
-      }
-    } else {
-      // Other platforms not supported
+    // Check for basic biometric hardware and enrollment
+    if (!biometricSupport.isSupported) {
+      console.debug("[ExpoPasskey] Biometric hardware not supported");
       return false;
     }
 
-    // Finally, check if native WebAuthn module is available
-    return isNativePasskeySupported();
+    if (!biometricSupport.isEnrolled) {
+      console.debug("[ExpoPasskey] Biometrics not enrolled");
+      return false;
+    }
+
+    // Check platform version requirements using the utility function
+    const platformVersion =
+      Platform.OS === "android"
+        ? Device.platformApiLevel || Platform.Version
+        : Platform.Version;
+
+    if (!isSupportedPlatform(Platform.OS, platformVersion)) {
+      console.debug(
+        "[ExpoPasskey] Platform/version not supported:",
+        Platform.OS,
+        platformVersion,
+      );
+      return false;
+    }
+
+    // Final check: native WebAuthn module
+    try {
+      const nativeSupported = await isNativePasskeySupported();
+      console.debug(
+        "[ExpoPasskey] Native module support result:",
+        nativeSupported,
+      );
+      return nativeSupported;
+    } catch (error) {
+      console.error("[ExpoPasskey] Error checking native module:", error);
+      return false;
+    }
   } catch (error) {
-    console.error("Error checking passkey support:", error);
+    console.error(
+      "[ExpoPasskey] Unexpected error in isPasskeySupported:",
+      error,
+    );
     return false;
   }
 }

@@ -26,8 +26,27 @@ export function isSupportedPlatform(
   }
 
   if (platform === "android") {
-    // Android API level 29+ (Android 10+)
-    return typeof version === "number" && version >= 29;
+    // Android API level 28+ (Android 9+) according to Google's documentation
+    if (typeof version === "number") {
+      return version >= 28;
+    }
+
+    // If version is a string, try to parse it
+    if (typeof version === "string") {
+      try {
+        // First, check if it's a direct API level
+        const apiLevel = parseInt(version, 10);
+        if (!isNaN(apiLevel)) {
+          return apiLevel >= 28;
+        }
+
+        // If not, check if it's a version string (e.g. "9.0.0")
+        const major = parseInt(version.split(".")[0], 10);
+        return !isNaN(major) && major >= 9;
+      } catch (_e) {
+        return false;
+      }
+    }
   }
 
   return false;

@@ -67,8 +67,26 @@ export function getNativeModule(): ExpoPasskeyModule {
 export async function isNativePasskeySupported(): Promise<boolean> {
   try {
     const nativeModule = getNativeModule();
-    return nativeModule.isPasskeySupported();
-  } catch (_error) {
+
+    // Call the native method and log the result
+    const result = nativeModule.isPasskeySupported();
+    console.debug(
+      `[ExpoPasskey] Native module isPasskeySupported() returned: ${result}`,
+    );
+
+    return result;
+  } catch (error) {
+    console.error(
+      "[ExpoPasskey] Error checking native passkey support:",
+      error,
+    );
+
+    // Log additional information for debugging
+    if (error instanceof Error) {
+      console.error("[ExpoPasskey] Error message:", error.message);
+      console.error("[ExpoPasskey] Error stack:", error.stack);
+    }
+
     return false;
   }
 }
