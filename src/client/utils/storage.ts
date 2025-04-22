@@ -4,6 +4,7 @@
  */
 
 import type { ExpoPasskeyClientOptions, StorageKeys } from "../../types/client";
+import { loadExpoModules } from "./modules";
 
 /**
  * Credential metadata stored with each credential ID
@@ -16,6 +17,11 @@ export interface CredentialMetadata {
   lastUsedAt: string;
   deviceName?: string;
   displayName?: string;
+}
+
+// Helper function to get modules only when needed
+function getModules() {
+  return loadExpoModules();
 }
 
 /**
@@ -51,7 +57,7 @@ export async function storeCredentialId(
   additionalMetadata: Partial<CredentialMetadata> = {},
 ): Promise<void> {
   try {
-    const { SecureStore } = require("expo-secure-store");
+    const { SecureStore } = getModules();
     const KEYS = getStorageKeys(options);
 
     // Store the user ID
@@ -102,7 +108,7 @@ export async function getCredentialMetadata(
   options: ExpoPasskeyClientOptions = {},
 ): Promise<Record<string, CredentialMetadata>> {
   try {
-    const { SecureStore } = require("expo-secure-store");
+    const { SecureStore } = getModules();
     const KEYS = getStorageKeys(options);
 
     const existingIdsStr = await SecureStore.getItemAsync(KEYS.CREDENTIAL_IDS);
@@ -155,7 +161,7 @@ export async function updateCredentialLastUsed(
   options: ExpoPasskeyClientOptions = {},
 ): Promise<void> {
   try {
-    const { SecureStore } = require("expo-secure-store");
+    const { SecureStore } = getModules();
     const KEYS = getStorageKeys(options);
 
     // Get existing credential IDs
@@ -209,7 +215,7 @@ export async function removeCredentialId(
   options: ExpoPasskeyClientOptions = {},
 ): Promise<void> {
   try {
-    const { SecureStore } = require("expo-secure-store");
+    const { SecureStore } = getModules();
     const KEYS = getStorageKeys(options);
 
     // Get existing credential IDs
