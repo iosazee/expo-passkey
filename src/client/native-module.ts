@@ -3,7 +3,7 @@
  * @module expo-passkey/client/native-module
  */
 
-import { requireOptionalNativeModule } from "expo-modules-core";
+import { Platform } from "react-native";
 import { ERROR_CODES, PasskeyError } from "../types/errors";
 import type {
   AuthenticationPublicKeyCredential,
@@ -11,6 +11,7 @@ import type {
   NativeRegistrationOptions,
   RegistrationPublicKeyCredential,
 } from "../types";
+import { loadExpoNativeModules } from "./utils/modules";
 
 /**
  * Interface for the ExpoPasskey native module
@@ -40,36 +41,40 @@ interface ExpoPasskeyModule {
  * @throws PasskeyError if the module is not available
  */
 export function getNativeModule(): ExpoPasskeyModule {
-  try {
-    const ExpoPasskey = requireOptionalNativeModule("ExpoPasskey");
+  const { ExpoPasskey } = loadExpoNativeModules();
 
-    if (!ExpoPasskey) {
-      throw new PasskeyError(
-        ERROR_CODES.ENVIRONMENT.MODULE_NOT_FOUND,
-        "ExpoPasskey native module not found. Make sure the module is properly installed.",
-      );
-    }
-
-    return ExpoPasskey;
-  } catch (error) {
+  if (!ExpoPasskey) {
+    console.warn(
+      "[ExpoPasskey] Native module not found through loadExpoNativeModules. " +
+        "This may indicate the module is not properly linked.",
+    );
     throw new PasskeyError(
       ERROR_CODES.ENVIRONMENT.MODULE_NOT_FOUND,
-      error instanceof Error
-        ? error.message
-        : "Failed to get ExpoPasskey native module",
+      "ExpoPasskey native module not found. Make sure the module is properly installed and linked.",
     );
   }
+
+  return ExpoPasskey;
 }
 
 /**
  * Check if passkeys are supported on this device via the native module
+ * Enhanced with better error handling and debug logging
  */
 export async function isNativePasskeySupported(): Promise<boolean> {
   try {
-    const nativeModule = getNativeModule();
+    const { ExpoPasskey } = loadExpoNativeModules();
+
+    // If the module couldn't be loaded, passkeys aren't supported
+    if (!ExpoPasskey) {
+      console.debug(
+        "[ExpoPasskey] Native module not available, passkeys not supported",
+      );
+      return false;
+    }
 
     // Call the native method and log the result
-    const result = nativeModule.isPasskeySupported();
+    const result = ExpoPasskey.isPasskeySupported();
     console.debug(
       `[ExpoPasskey] Native module isPasskeySupported() returned: ${result}`,
     );
@@ -105,11 +110,17 @@ export async function createNativePasskey(
 
     return JSON.parse(credentialJSON);
   } catch (error) {
+    // Enhance error message based on platform
+    const platformHint =
+      Platform.OS === "ios"
+        ? "Ensure iOS 16+ and ExpoPasskey pod is properly installed."
+        : "Ensure Android API 28+ and credentials-play-services-auth dependency is properly set up.";
+
     throw new PasskeyError(
       ERROR_CODES.WEBAUTHN.NATIVE_MODULE_ERROR,
       error instanceof Error
-        ? error.message
-        : "Failed to create passkey with native module",
+        ? `Failed to create passkey: ${error.message}. ${platformHint}`
+        : `Failed to create passkey. ${platformHint}`,
     );
   }
 }
@@ -128,11 +139,17 @@ export async function authenticateWithNativePasskey(
 
     return JSON.parse(credentialJSON);
   } catch (error) {
+    // Enhance error message based on platform
+    const platformHint =
+      Platform.OS === "ios"
+        ? "Ensure iOS 16+ and ExpoPasskey pod is properly installed."
+        : "Ensure Android API 28+ and credentials-play-services-auth dependency is properly set up.";
+
     throw new PasskeyError(
       ERROR_CODES.WEBAUTHN.NATIVE_MODULE_ERROR,
       error instanceof Error
-        ? error.message
-        : "Failed to authenticate with native module",
+        ? `Failed to authenticate with passkey: ${error.message}. ${platformHint}`
+        : `Failed to authenticate with passkey. ${platformHint}`,
     );
   }
 }
