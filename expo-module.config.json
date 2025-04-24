@@ -1,4 +1,5 @@
 {
+  "name": "expo-passkey",
   "platforms": ["ios", "android"],
   "ios": {
     "modules": ["ExpoPasskeyModule"]

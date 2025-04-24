@@ -1,2 +1,39 @@
 # Test scripts
 scripts/test-check-server-deps.cjs
+
+# Development files
+src/
+coverage/
+scripts/
+.github/
+__tests__/
+**/__tests__/
+**/*.test.ts
+**/*.spec.ts
+jest.config.js
+tsconfig.test.json
+
+# Config files
+.prettierrc
+.prettierignore
+.eslintrc.js
+eslint.config.js
+tsconfig.json
+tsup.config.ts
+
+# Build artifacts
+android/build/
+ios/build/
+build/plugin/
+
+# Misc
+.DS_Store
+.idea/
+.vscode/
+*.tgz
+*.log
+node_modules/
+
+# Keep dist directory for compiled files
+!build/
+!build/cjs/

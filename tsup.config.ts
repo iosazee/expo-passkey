@@ -1,7 +1,5 @@
 import { defineConfig } from 'tsup';
 
-
-
 export default defineConfig([
   // ESM build
   {
@@ -12,12 +10,12 @@ export default defineConfig([
       'types/index': 'src/types/index.ts',
     },
     format: ['esm'],
-    dts: true,
+   dts: true,
     sourcemap: false,
     minify: true,
     clean: true,
     target: 'es2020',
-    outDir: 'dist',
+    outDir: 'build',
     external: [
       'react-native',
       'expo-application',
@@ -25,6 +23,7 @@ export default defineConfig([
       'expo-secure-store',
       'expo-crypto',
       'expo-device',
+      'expo-modules-core',
       'better-auth',
       '@better-fetch/fetch',
       'zod',
@@ -45,7 +44,7 @@ export default defineConfig([
     minify: true,
     clean: false,
     target: 'es2020',
-    outDir: 'dist/cjs',
+    outDir: 'build/cjs',
     external: [
       'react-native',
       'expo-application',
@@ -53,6 +52,7 @@ export default defineConfig([
       'expo-secure-store',
       'expo-crypto',
       'expo-device',
+      'expo-modules-core',
       'better-auth',
       '@better-fetch/fetch',
       'zod',

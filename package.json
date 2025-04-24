@@ -24,10 +24,11 @@
   "bugs": {
     "url": "https://github.com/iosazee/expo-passkey/issues"
   },
-  "main": "dist/cjs/index.cjs",
-  "module": "dist/index.js",
-  "react-native": "dist/client/index.js",
-  "types": "dist/index.d.ts",
+  "main": "build/index.js",
+  "module": "build/index.js",
+  "types": "build/index.d.ts",
+  "react-native": "src/index.ts",
+  "source": "src/index.ts",
   "expo": {
     "name": "expo-passkey",
     "platforms": [
@@ -37,41 +38,41 @@
   },
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/cjs/index.cjs"
+      "types": "./build/index.d.ts",
+      "import": "./build/index.js",
+      "require": "./build/cjs/index.cjs"
     },
     "./client": {
-      "types": "./dist/client/index.d.ts",
-      "import": "./dist/client/index.js",
-      "require": "./dist/cjs/client/index.cjs"
+      "types": "./build/client/index.d.ts",
+      "import": "./build/client/index.js",
+      "require": "./build/cjs/client/index.cjs"
     },
     "./server": {
-      "types": "./dist/server/index.d.ts",
-      "import": "./dist/server/index.js",
-      "require": "./dist/cjs/server/index.cjs"
+      "types": "./build/server/index.d.ts",
+      "import": "./build/server/index.js",
+      "require": "./build/cjs/server/index.cjs"
     },
     "./types": {
-      "types": "./dist/types/index.d.ts",
-      "import": "./dist/types/index.js",
-      "require": "./dist/cjs/types/index.cjs"
+      "types": "./build/types/index.d.ts",
+      "import": "./build/types/index.js",
+      "require": "./build/cjs/types/index.cjs"
     }
   },
   "typesVersions": {
     "*": {
       "client": [
-        "./dist/client/index.d.ts"
+        "./build/client/index.d.ts"
       ],
       "server": [
-        "./dist/server/index.d.ts"
+        "./build/server/index.d.ts"
       ],
       "types": [
-        "./dist/types/index.d.ts"
+        "./build/types/index.d.ts"
       ]
     }
   },
   "files": [
-    "dist",
+    "build",
     "android",
     "ios",
     "LICENSE",
@@ -81,9 +82,13 @@
   ],
   "sideEffects": false,
   "scripts": {
-    "clean": "rimraf dist",
+    "clean": "rimraf build",
     "build": "tsup",
     "dev": "tsup --watch",
+    "prepare": "expo-module prepare",
+    "prebuild:native": "expo-module build",
+    "build:all": "npm run prebuild:native && npm run build",
+    "expo-module": "expo-module",
     "postinstall": "node scripts/check-server-deps.cjs || true",
     "test": "jest",
     "test:client": "jest --selectProjects client",
@@ -96,24 +101,32 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier -w .",
     "typecheck": "tsc --noEmit",
-    "prepare": "npm run build",
-    "prepublishOnly": "npm run test && npm run lint:fix && npm run build"
+    "prepublishOnly": "expo-module prepublishOnly && npm run test && npm run lint:fix && npm run build:all"
   },
   "devDependencies": {
-    "@simplewebauthn/types": ">=12.0.0",
+    "@better-fetch/fetch": "^1.1.17",
     "@changesets/cli": "^2.28.1",
     "@eslint/js": "^9.23.0",
     "@jest/globals": "^29.7.0",
+    "@simplewebauthn/types": ">=12.0.0",
     "@testing-library/react-native": "^13.2.0",
     "@types/jest": "^29.5.14",
     "@types/node": "^22.13.11",
     "@typescript-eslint/eslint-plugin": "^8.27.0",
     "@typescript-eslint/parser": "^8.27.0",
+    "better-auth": "^1.2.4",
     "eslint": "^9.23.0",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-jest": "^28.11.0",
     "eslint-plugin-prettier": "^5.2.4",
+    "expo": "^52.0.40",
+    "expo-application": "^6.0.2",
+    "expo-crypto": "^14.0.2",
+    "expo-device": "^7.0.2",
+    "expo-local-authentication": "^15.0.2",
+    "expo-module-scripts": "^4.0.5",
+    "expo-secure-store": "^14.0.1",
     "globals": "^16.0.0",
     "husky": "^9.1.7",
     "jest": "^29.7.0",
@@ -125,30 +138,22 @@
     "ts-jest": "^29.2.6",
     "tsup": "^8.4.0",
     "typescript": "^5.8.2",
-    "zod": "^3.24.2",
-    "expo": "^52.0.40",
-    "expo-application": "^6.0.2",
-    "expo-local-authentication": "^15.0.2",
-    "expo-secure-store": "^14.0.1",
-    "expo-crypto": "^14.0.2",
-    "expo-device": "^7.0.2",
-    "better-auth": "^1.2.4",
-    "@better-fetch/fetch": "^1.1.17"
+    "zod": "^3.24.2"
   },
   "peerDependencies": {
-    "better-auth": ">=1.0.0",
+    "@better-auth/expo": ">=1.0.0",
     "@better-fetch/fetch": ">=1.0.0",
+    "@simplewebauthn/server": ">=13.0.0",
+    "better-auth": ">=1.0.0",
     "expo": ">=50.0.0",
     "expo-application": ">=5.0.0",
-    "expo-local-authentication": ">=13.0.0",
-    "expo-secure-store": ">=12.0.0",
     "expo-crypto": ">=12.0.0",
     "expo-device": ">=5.0.0",
+    "expo-local-authentication": ">=13.0.0",
+    "expo-modules-core": ">=2.2.3",
+    "expo-secure-store": ">=12.0.0",
     "react-native": "*",
-    "@better-auth/expo": ">=1.0.0",
-    "zod": ">=3.0.0",
-    "@simplewebauthn/server": ">=13.0.0",
-    "expo-modules-core": ">=2.2.3"
+    "zod": ">=3.0.0"
   },
   "peerDependenciesMeta": {
     "expo": {
