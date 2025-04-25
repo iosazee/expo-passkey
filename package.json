@@ -1,134 +1,95 @@
 {
   "name": "expo-passkey",
-  "version": "0.1.0-beta.20",
-  "type": "module",
+  "version": "0.1.0",
   "description": "Passkey authentication for Expo apps with Better Auth integration",
-  "author": "Zee Mudia",
-  "license": "MIT",
-  "keywords": [
-    "expo",
-    "passkey",
-    "biometric",
-    "authentication",
-    "better-auth",
-    "react-native",
-    "face-id",
-    "touch-id",
-    "fingerprint"
-  ],
-  "homepage": "https://github.com/iosazee/expo-passkey",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/iosazee/expo-passkey.git"
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
+  "scripts": {
+    "build": "expo-module build",
+    "clean": "expo-module clean",
+    "lint": "expo-module lint",
+    "test": "expo-module test",
+    "prepare": "expo-module prepare",
+    "prepublishOnly": "expo-module prepublishOnly",
+    "expo-module": "expo-module",
+    "open:ios": "xed example/ios",
+    "open:android": "open -a \"Android Studio\" example/android"
   },
-  "bugs": {
-    "url": "https://github.com/iosazee/expo-passkey/issues"
-  },
-  "main": "dist/cjs/index.cjs",
-  "module": "dist/index.js",
-  "react-native": "dist/client/index.js",
-  "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/cjs/index.cjs"
-    },
-    "./client": {
-      "types": "./dist/client/index.d.ts",
-      "import": "./dist/client/index.js",
-      "require": "./dist/cjs/client/index.cjs"
+      "types": "./build/index.d.ts",
+      "import": "./build/index.js",
+      "require": "./build/index.js"
     },
     "./server": {
-      "types": "./dist/server/index.d.ts",
-      "import": "./dist/server/index.js",
-      "require": "./dist/cjs/server/index.cjs"
-    },
-    "./types": {
-      "types": "./dist/types/index.d.ts",
-      "import": "./dist/types/index.js",
-      "require": "./dist/cjs/types/index.cjs"
+      "types": "./build/server/index.d.ts",
+      "import": "./build/server/index.js",
+      "require": "./build/server/index.js"
     }
   },
   "typesVersions": {
     "*": {
-      "client": [
-        "./dist/client/index.d.ts"
-      ],
       "server": [
-        "./dist/server/index.d.ts"
-      ],
-      "types": [
-        "./dist/types/index.d.ts"
+        "./build/server/index.d.ts"
       ]
     }
   },
-  "files": [
-    "dist",
-    "LICENSE",
-    "README.md",
-    "CHANGELOG.md"
+  "keywords": [
+    "react-native",
+    "expo",
+    "expo-passkey",
+    "ExpoPasskeyModule",
+    "passkey",
+    "biometric",
+    "authentication",
+    "better-auth",
+    "face-id",
+    "touch-id",
+    "fingerprint"
   ],
-  "sideEffects": false,
-  "scripts": {
-    "clean": "rimraf dist",
-    "build": "tsup",
-    "dev": "tsup --watch",
-    "test": "jest",
-    "test:client": "jest --selectProjects client",
-    "test:server": "jest --selectProjects server",
-    "test:watch": "jest --watch",
-    "test:client:watch": "jest --selectProjects client --watch",
-    "test:server:watch": "jest --selectProjects server --watch",
-    "test:coverage": "jest --coverage",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "format": "prettier -w .",
-    "typecheck": "tsc --noEmit",
-    "prepare": "npm run build",
-    "prepublishOnly": "npm run test && npm run lint:fix && npm run build"
+  "repository": "https://github.com/iosazee/expo-passkey",
+  "bugs": {
+    "url": "https://github.com/iosazee/expo-passkey/issues"
+  },
+  "author": "Zee Mudia <zee@zeemudia.com> (https://github.com/iosazee)",
+  "license": "MIT",
+  "homepage": "https://github.com/iosazee/expo-passkey#readme",
+  "dependencies": {},
+  "devDependencies": {
+    "@simplewebauthn/types": ">=12.0.0",
+    "@types/react": "~18.3.12",
+    "expo-module-scripts": "^4.0.4",
+    "expo": "~52.0.0",
+    "react-native": "0.76.0",
+    "typescript": "^5.0.0"
   },
   "peerDependencies": {
-    "better-auth": "^1.0.0",
-    "@better-fetch/fetch": "^1.0.0",
     "expo": ">=50.0.0",
+    "react": "*",
+    "react-native": "*",
     "expo-application": ">=5.0.0",
     "expo-local-authentication": ">=13.0.0",
     "expo-secure-store": ">=12.0.0",
     "expo-crypto": ">=12.0.0",
     "expo-device": ">=5.0.0",
-    "react-native": "*",
-    "@better-auth/expo": "^1.0.0",
-    "zod": "^3.0.0"
+    "@better-auth/expo": ">=1.0.0",
+    "zod": ">=3.0.0",
+    "@simplewebauthn/server": ">=13.0.0",
+    "better-auth": ">=1.0.0",
+    "@better-fetch/fetch": ">=1.0.0"
   },
   "peerDependenciesMeta": {
-    "expo": {
+    "@simplewebauthn/server": {
       "optional": true
     },
-    "expo-application": {
+    "better-auth": {
       "optional": true
     },
-    "expo-local-authentication": {
+    "@better-fetch/fetch": {
       "optional": true
     },
-    "expo-secure-store": {
-      "optional": true
-    },
-    "expo-crypto": {
-      "optional": true
-    },
-    "expo-device": {
-      "optional": true
-    },
-    "react-native": {
-      "optional": true
-    },
-    "@better-auth/expo": {
+    "zod": {
       "optional": true
     }
-  },
-  "publishConfig": {
-    "access": "public",
-    "tag": "latest"
   }
 }

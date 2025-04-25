@@ -1,48 +1,57 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-# Dependency directories
-node_modules/
-
-# Build output
-dist/
-build/
-
-# TypeScript cache
-*.tsbuildinfo
-
-# Testing
-coverage/
-jest-html-reporters-*.html
-
-# VSCode settings (optional, but common)
-.vscode/
-
-# Mac system files
+# OSX
+#
 .DS_Store
 
-# Environment files
-.env
-.env.* # e.g., .env.local, .env.production
+# VSCode
+.vscode/
+jsconfig.json
 
-# Husky hooks if not part of source
-.husky/_
+# Xcode
+#
+build/
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+xcuserdata
+*.xccheckout
+*.moved-aside
+DerivedData
+*.hmap
+*.ipa
+*.xcuserstate
+project.xcworkspace
 
-# Lint/format reports
-eslint-report.*
-prettier-report.*
+# Android/IJ
+#
+.classpath
+.cxx
+.gradle
+.idea
+.project
+.settings
+local.properties
+android.iml
+android/app/libs
+android/keystores/debug.keystore
 
-# Next.js or similar frameworks (if you ever use them)
-.next/
-out/
+# Cocoapods
+#
+example/ios/Pods
 
-# Expo specific
-.expo/
-.expo-shared/
+# Ruby
+example/vendor/
 
+# node.js
+#
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
 
+# Expo
+.expo/*
