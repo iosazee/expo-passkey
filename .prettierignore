@@ -1,0 +1,25 @@
+# Dependency directories
+node_modules/
+
+# Build directories
+dist/
+.build/
+
+# Generated files
+coverage/
+*.d.ts
+
+# Configuration files that might have custom formatting
+*.config.js
+*.config.ts
+tsup.config.ts
+jest.config.js
+
+# Package files
+package.json
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# Markdown files
+*.md

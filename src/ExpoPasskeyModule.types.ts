@@ -1,19 +1,48 @@
-import type { StyleProp, ViewStyle } from 'react-native';
+/**
+ * Types for the ExpoPasskey Native Module
+ */
 
-export type OnLoadEventPayload = {
-  url: string;
-};
+/**
+ * Options for creating a new passkey
+ */
+export interface CreatePasskeyOptions {
+  /**
+   * WebAuthn registration options serialized as a JSON string
+   */
+  requestJson: string;
+}
 
-export type ExpoPasskeyModuleEvents = {
-  onChange: (params: ChangeEventPayload) => void;
-};
+/**
+ * Options for authenticating with a passkey
+ */
+export interface AuthenticatePasskeyOptions {
+  /**
+   * WebAuthn authentication options serialized as a JSON string
+   */
+  requestJson: string;
+}
 
-export type ChangeEventPayload = {
-  value: string;
-};
+/**
+ * Interface for the ExpoPasskey native module
+ */
+export interface ExpoPasskeyModule {
+  /**
+   * Check if passkeys are supported on this device
+   * @returns Promise resolving to boolean indicating if passkeys are supported
+   */
+  isPasskeySupported(): boolean;
 
-export type ExpoPasskeyModuleViewProps = {
-  url: string;
-  onLoad: (event: { nativeEvent: OnLoadEventPayload }) => void;
-  style?: StyleProp<ViewStyle>;
-};
+  /**
+   * Create a new passkey (WebAuthn credential registration)
+   * @param options Options for creating a passkey
+   * @returns Promise resolving to credential JSON string
+   */
+  createPasskey(options: CreatePasskeyOptions): Promise<string>;
+
+  /**
+   * Authenticate with a passkey (WebAuthn credential authentication)
+   * @param options Options for authenticating with a passkey
+   * @returns Promise resolving to credential JSON string
+   */
+  authenticateWithPasskey(options: AuthenticatePasskeyOptions): Promise<string>;
+}

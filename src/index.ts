@@ -1,5 +1,31 @@
-// Reexport the native module. On web, it will be resolved to ExpoPasskeyModule.web.ts
-// and on native platforms to ExpoPasskeyModule.ts
-export { default } from './ExpoPasskeyModule';
-export { default as ExpoPasskeyModuleView } from './ExpoPasskeyModuleView';
-export * from  './ExpoPasskeyModule.types';
+/**
+ * @file Main entry point for expo-passkey
+ * @description Client-side exports for Expo Passkey authentication
+ * @module expo-passkey
+ */
+
+// Export the native module
+export { default } from "./ExpoPasskeyModule";
+export * from "./ExpoPasskeyModule.types";
+
+// Client exports only (no server imports to prevent Metro issues)
+export { ERROR_CODES, PasskeyError } from "./types/errors";
+export { expoPasskeyClient } from "./client";
+
+// Re-export client-side types
+export type {
+  BiometricSupportInfo,
+  DeviceInfo,
+  PasskeyPlatform,
+  PasskeyMetadata,
+  PasskeyState,
+  AuthOptions,
+  WebAuthnSupportInfo,
+} from "./types/passkey";
+
+// Re-export WebAuthn types that might be needed by client
+export type {
+  AuthenticatorAttachment,
+  UserVerificationRequirement,
+  PublicKeyCredentialDescriptor,
+} from "./types/webauthn";
