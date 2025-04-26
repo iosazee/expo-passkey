@@ -1,9 +1,17 @@
 {
   "name": "expo-passkey",
-  "version": "0.1.0",
+  "version": "0.1.0-alpha.17",
   "description": "Passkey authentication for Expo apps with Better Auth integration",
   "main": "build/index.js",
   "types": "build/index.d.ts",
+  "files": [
+    "build",
+    "android",
+    "ios",
+    "LICENSE",
+    "README.md"
+  ],
+  "sideEffects": false,
   "scripts": {
     "build": "expo-module build",
     "clean": "expo-module clean",
@@ -79,17 +87,48 @@
     "zod": ">=3.0.0"
   },
   "peerDependenciesMeta": {
-    "@simplewebauthn/server": {
+    "react": {
       "optional": true
     },
-    "better-auth": {
+    "react-native": {
+      "optional": true
+    },
+    "expo": {
+      "optional": true
+    },
+    "expo-application": {
+      "optional": true
+    },
+    "expo-crypto": {
+      "optional": true
+    },
+    "expo-device": {
+      "optional": true
+    },
+    "expo-local-authentication": {
+      "optional": true
+    },
+    "expo-secure-store": {
+      "optional": true
+    },
+    "@better-auth/expo": {
       "optional": true
     },
     "@better-fetch/fetch": {
       "optional": true
     },
+    "better-auth": {
+      "optional": true
+    },
+    "@simplewebauthn/server": {
+      "optional": true
+    },
     "zod": {
       "optional": true
     }
+  },
+  "publishConfig": {
+    "access": "public",
+    "tag": "alpha"
   }
 }
