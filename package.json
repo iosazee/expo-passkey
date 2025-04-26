@@ -12,8 +12,8 @@
     "prepare": "expo-module prepare",
     "prepublishOnly": "expo-module prepublishOnly",
     "expo-module": "expo-module",
-    "open:ios": "xed example/ios",
-    "open:android": "open -a \"Android Studio\" example/android"
+    "open:ios": "xed example/client/ios",
+    "open:android": "open -a \"Android Studio\" example/client/android"
   },
   "exports": {
     ".": {
