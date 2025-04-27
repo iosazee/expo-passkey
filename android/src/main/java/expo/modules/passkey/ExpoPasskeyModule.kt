@@ -23,7 +23,7 @@ class ExpoPasskeyModule : Module() {
   private var credentialManager: PasskeyCredentialManager? = null
   
   override fun definition() = ModuleDefinition {
-    Name("ExpoPasskey")
+    Name("ExpoPasskeyModule")
     
     OnCreate {
       // Initialize the credential manager when the module is created

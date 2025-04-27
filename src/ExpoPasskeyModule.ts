@@ -27,6 +27,6 @@ export interface ExpoPasskeyInterface {
 
 // This call loads the native module object from the JSI or Native Modules bridge
 const ExpoPasskeyModule =
-  requireNativeModule<ExpoPasskeyInterface>("ExpoPasskey");
+  requireNativeModule<ExpoPasskeyInterface>("ExpoPasskeyModule");
 
 export default ExpoPasskeyModule;

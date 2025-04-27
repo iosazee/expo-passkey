@@ -1,2 +1,4 @@
-<manifest>
+<?xml version="1.0" encoding="utf-8"?>
+<manifest package="expo.modules.passkey">
+  <uses-permission android:name="android.permission.INTERNET" />
 </manifest>
