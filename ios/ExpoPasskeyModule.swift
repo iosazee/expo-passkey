@@ -11,6 +11,7 @@ public class ExpoPasskeyModule: Module {
     
     // Check if passkeys are supported on this device
     Function("isPasskeySupported") { () -> Bool in
+      // Runtime check for iOS 16+ 
       if #available(iOS 16.0, *) {
         // Check if biometric authentication is available
         let context = LAContext()
@@ -22,13 +23,14 @@ public class ExpoPasskeyModule: Module {
         }
         return false
       } else {
+        // Not supported on iOS < 16
         return false
       }
     }
     
     // Create a new passkey (WebAuthn credential registration)
     AsyncFunction("createPasskey") { (options: [String: Any], promise: Promise) in
-      // Ensure we're on iOS 16+ which supports passkeys
+      // Runtime check for iOS 16+
       guard #available(iOS 16.0, *) else {
         promise.reject(PasskeyError.unsupported("Passkeys require iOS 16 or later"))
         return
@@ -140,7 +142,7 @@ public class ExpoPasskeyModule: Module {
     
     // Authenticate with an existing passkey
     AsyncFunction("authenticateWithPasskey") { (options: [String: Any], promise: Promise) in
-      // Ensure we're on iOS 16+ which supports passkeys
+      // Runtime check for iOS 16+
       guard #available(iOS 16.0, *) else {
         promise.reject(PasskeyError.unsupported("Passkeys require iOS 16 or later"))
         return

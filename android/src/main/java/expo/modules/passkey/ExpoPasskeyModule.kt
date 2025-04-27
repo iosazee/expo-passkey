@@ -23,6 +23,7 @@ class ExpoPasskeyModule : Module() {
   private var credentialManager: PasskeyCredentialManager? = null
   
   override fun definition() = ModuleDefinition {
+    // Important: Make sure the name is consistent with what's expected in JS
     Name("ExpoPasskeyModule")
     
     OnCreate {
@@ -44,13 +45,7 @@ class ExpoPasskeyModule : Module() {
           return@Function false
         }
         
-        // Always consider Android 14+ (API 34+) as supported
-        if (androidVersion >= 34) {
-          Log.d(TAG, "Android 14+ detected, assuming passkey support is available")
-          return@Function true
-        }
-        
-        // For Android 9-13, check credential manager
+        // Delegate to credential manager for more thorough checks
         val isSupported = credentialManager?.isSupported() ?: false
         Log.d(TAG, "Passkey supported via CredentialManager: $isSupported")
         return@Function isSupported
@@ -63,11 +58,25 @@ class ExpoPasskeyModule : Module() {
     
     // Create a new passkey (Registration flow)
     AsyncFunction("createPasskey") { options: Map<String, Any>, promise: Promise ->
-      val activity = appContext.currentActivity as? ComponentActivity
-        ?: return@AsyncFunction promise.reject(PasskeyError("ERR_NO_ACTIVITY", "No activity available or not a ComponentActivity"))
+      val activity = appContext.currentActivity
       
+      // Activity validation with detailed error
+      if (activity == null) {
+        return@AsyncFunction promise.reject(PasskeyError("ERR_NO_ACTIVITY", "No current activity available"))
+      }
+      
+      if (activity !is ComponentActivity) {
+        return@AsyncFunction promise.reject(PasskeyError("ERR_INVALID_ACTIVITY", "Activity is not a ComponentActivity. Make sure you're using an AppCompat or AndroidX activity"))
+      }
+      
+      // Check for passkey support
       if (credentialManager?.isSupported() != true) {
-        return@AsyncFunction promise.reject(PasskeyError("ERR_UNSUPPORTED", "Passkeys are not supported on this device"))
+        val errorMsg = if (Build.VERSION.SDK_INT < 28) {
+          "Passkeys require Android 9 (API 28) or later"
+        } else {
+          "Passkeys are not supported on this device. Ensure biometric authentication is set up"
+        }
+        return@AsyncFunction promise.reject(PasskeyError("ERR_UNSUPPORTED", errorMsg))
       }
       
       val requestJson = options["requestJson"] as? String
@@ -98,11 +107,25 @@ class ExpoPasskeyModule : Module() {
     
     // Authenticate with passkey (Authentication flow)
     AsyncFunction("authenticateWithPasskey") { options: Map<String, Any>, promise: Promise ->
-      val activity = appContext.currentActivity as? ComponentActivity
-        ?: return@AsyncFunction promise.reject(PasskeyError("ERR_NO_ACTIVITY", "No activity available or not a ComponentActivity"))
+      val activity = appContext.currentActivity
       
+      // Better activity validation with detailed error
+      if (activity == null) {
+        return@AsyncFunction promise.reject(PasskeyError("ERR_NO_ACTIVITY", "No current activity available"))
+      }
+      
+      if (activity !is ComponentActivity) {
+        return@AsyncFunction promise.reject(PasskeyError("ERR_INVALID_ACTIVITY", "Activity is not a ComponentActivity. Make sure you're using an AppCompat or AndroidX activity"))
+      }
+      
+      // Check for passkey support
       if (credentialManager?.isSupported() != true) {
-        return@AsyncFunction promise.reject(PasskeyError("ERR_UNSUPPORTED", "Passkeys are not supported on this device"))
+        val errorMsg = if (Build.VERSION.SDK_INT < 28) {
+          "Passkeys require Android 9 (API 28) or later"
+        } else {
+          "Passkeys are not supported on this device. Ensure biometric authentication is set up"
+        }
+        return@AsyncFunction promise.reject(PasskeyError("ERR_UNSUPPORTED", errorMsg))
       }
       
       val requestJson = options["requestJson"] as? String

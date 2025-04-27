@@ -3,6 +3,7 @@ import Foundation
 /// Extracts the public key from an attestation object
 /// - Parameter attestationObject: Raw attestation object data
 /// - Returns: Extracted public key or nil if extraction fails
+@available(iOS 16.0, *)
 func getPublicKey(from attestationObject: Data) throws -> Data? {
     let cborDecoded: Any
     do {

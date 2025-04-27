@@ -1,6 +1,6 @@
 require 'json'
 
-package = JSON.parse(File.read(File.join(__dir__, '..', 'package.json')))
+package = JSON.parse(File.read(File.join(__dir__, 'package.json')))
 
 Pod::Spec.new do |s|
   s.name           = 'ExpoPasskeyModule'
@@ -10,7 +10,7 @@ Pod::Spec.new do |s|
   s.license        = package['license']
   s.author         = package['author']
   s.homepage       = package['homepage']
-  s.platform       = :ios, '16.0' 
+  s.platform       = :ios, '15.1' 
   s.swift_version  = '5.4'
   s.source         = { git: 'https://github.com/iosazee/expo-passkey' }
   s.static_framework = true
@@ -23,5 +23,6 @@ Pod::Spec.new do |s|
     'SWIFT_COMPILATION_MODE' => 'wholemodule'
   }
   
-  s.source_files = "**/*.{h,m,swift}"
+  # Updated path to point to the ios directory
+  s.source_files = "ios/**/*.{h,m,swift}"
 end

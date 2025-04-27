@@ -1,6 +1,7 @@
 import ExpoModulesCore
 import AuthenticationServices
 
+// Make the entire class conditionally available for iOS 16+
 @available(iOS 16.0, *)
 class PasskeyAuthorizationDelegate: NSObject, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
   private let promise: Promise

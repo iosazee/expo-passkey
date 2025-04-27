@@ -44,34 +44,47 @@ class PasskeyCredentialManager(private val context: Context) {
         // According to Google's documentation, passkeys are supported on Android 9+ (API level 28+)
         Log.d(TAG, "Checking passkey support - Android API level: ${Build.VERSION.SDK_INT}")
         
-        // Android 14+ (API 34+) should always be supported
-        if (Build.VERSION.SDK_INT >= 34) {
-            Log.d(TAG, "Android 14+ detected, passkeys are supported")
-            return true
+        // First check: Basic platform version requirement
+        if (Build.VERSION.SDK_INT < 28) {
+            Log.d(TAG, "Android version too old (< API 28), passkeys not supported")
+            return false
         }
         
-        // Android 9-13 (API 28-33) requires additional checks
-        if (Build.VERSION.SDK_INT >= 28) {
-            // Check if the credential manager can be initialized
+        // Android 14+ (API 34+) should always be supported with proper dependencies
+        if (Build.VERSION.SDK_INT >= 34) {
+            Log.d(TAG, "Android 14+ detected, passkeys are supported")
+            
+            // Still need to verify credential manager dependency is available
             try {
-                if (credentialManager != null || CredentialManager.create(context) != null) {
-                    Log.d(TAG, "CredentialManager initialized successfully")
-                    
-                    // Check if the device has necessary hardware features
-                    val packageManager = context.packageManager
-                    val hasBiometric = packageManager.hasSystemFeature("android.hardware.biometrics")
-                    val hasFingerprint = packageManager.hasSystemFeature("android.hardware.fingerprint")
-                    
-                    Log.d(TAG, "Biometric support: $hasBiometric, Fingerprint support: $hasFingerprint")
-                    
-                    // If any biometric capability is available, consider it supported
-                    if (hasBiometric || hasFingerprint) {
-                        return true
-                    }
+                if (CredentialManager.create(context) != null) {
+                    return true
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error checking credential manager support: ${e.message}")
+                Log.e(TAG, "CredentialManager initialization failed on Android 14+: ${e.message}")
+                return false
             }
+        }
+        
+        // More thorough check for Android 9-13 (API 28-33)
+        try {
+            // Try to initialize the credential manager
+            if (credentialManager != null || CredentialManager.create(context) != null) {
+                Log.d(TAG, "CredentialManager initialized successfully")
+                
+                // Check if the device has necessary hardware features
+                val packageManager = context.packageManager
+                val hasBiometric = packageManager.hasSystemFeature("android.hardware.biometrics")
+                val hasFingerprint = packageManager.hasSystemFeature("android.hardware.fingerprint")
+                val hasFaceAuth = packageManager.hasSystemFeature("android.hardware.biometrics.face")
+                val hasIrisAuth = packageManager.hasSystemFeature("android.hardware.biometrics.iris")
+                
+                Log.d(TAG, "Biometric support: $hasBiometric, Fingerprint: $hasFingerprint, Face: $hasFaceAuth, Iris: $hasIrisAuth")
+                
+                // If any biometric capability is available, consider it supported
+                return hasBiometric || hasFingerprint || hasFaceAuth || hasIrisAuth
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking credential manager support: ${e.message}")
         }
         
         // If we get here, passkeys are not supported
@@ -90,6 +103,11 @@ class PasskeyCredentialManager(private val context: Context) {
         requestJson: String
     ): JSONObject = withContext(Dispatchers.IO) {
         try {
+            // Check again if passkeys are supported
+            if (!isSupported()) {
+                throw Exception("Passkeys not supported on this device")
+            }
+            
             Log.d(TAG, "Starting passkey creation")
             val manager = credentialManager ?: throw Exception("CredentialManager not initialized")
             
@@ -126,6 +144,11 @@ class PasskeyCredentialManager(private val context: Context) {
         requestJson: String
     ): JSONObject = withContext(Dispatchers.IO) {
         try {
+            // Check again if passkeys are supported
+            if (!isSupported()) {
+                throw Exception("Passkeys not supported on this device")
+            }
+            
             Log.d(TAG, "Starting passkey authentication")
             val manager = credentialManager ?: throw Exception("CredentialManager not initialized")
             
