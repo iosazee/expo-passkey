@@ -1,6 +1,6 @@
 {
   "name": "expo-passkey",
-  "version": "0.1.0-alpha.19",
+  "version": "0.1.0-alpha.20",
   "description": "Passkey authentication for Expo apps with Better Auth integration",
   "main": "build/index.js",
   "types": "build/index.d.ts",
@@ -9,7 +9,8 @@
     "android",
     "ios",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "expo-module.config.json"
   ],
   "sideEffects": false,
   "scripts": {
