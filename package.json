@@ -1,6 +1,6 @@
 {
   "name": "expo-passkey",
-  "version": "0.1.0-alpha.20",
+  "version": "0.1.0-alpha.21",
   "description": "Passkey authentication for Expo apps with Better Auth integration",
   "main": "build/index.js",
   "types": "build/index.d.ts",
@@ -68,9 +68,19 @@
     "@types/node": "^22.15.2",
     "@types/react": "~18.3.12",
     "expo": "~52.0.0",
+    "expo-application": "^6.0.2",
+    "expo-device": "^7.0.3",
+    "expo-local-authentication": "^15.0.2",
+    "expo-secure-store": "^14.0.1",
+    "expo-crypto": "^14.0.2",
     "expo-module-scripts": "^4.0.4",
+    "expo-modules-core": "2.2.3",
     "react-native": "0.76.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "better-auth": "^1.2.7",
+    "zod": "^3.24.3",
+    "better-call": "^1.0.9",
+    "@simplewebauthn/server": "^13.1.1"
   },
   "peerDependencies": {
     "@better-auth/expo": ">=1.0.0",
