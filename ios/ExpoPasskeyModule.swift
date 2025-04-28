@@ -3,9 +3,8 @@ import AuthenticationServices
 import LocalAuthentication
 
 public class ExpoPasskeyModule: Module {
-  // Store delegate reference conditionally based on iOS version
-  @available(iOS 16.0, *)
-  private var authDelegateIOS16: PasskeyAuthorizationDelegate?
+  // Handle iOS version checks in the methods
+  private var authDelegate: NSObject?
   
   public func definition() -> ModuleDefinition {
     Name("ExpoPasskeyModule")
@@ -33,7 +32,7 @@ public class ExpoPasskeyModule: Module {
     AsyncFunction("createPasskey") { (options: [String: Any], promise: Promise) in
       // Runtime check for iOS 16+
       guard #available(iOS 16.0, *) else {
-        promise.reject(PasskeyError.unsupported("Passkeys require iOS 16 or later"))
+        promise.reject("ERR_UNSUPPORTED", "Passkeys require iOS 16 or later")
         return
       }
       
@@ -42,7 +41,7 @@ public class ExpoPasskeyModule: Module {
             let requestData = requestJson.data(using: .utf8),
             let requestOptions = try? JSONSerialization.jsonObject(with: requestData) as? [String: Any]
       else {
-        promise.reject(PasskeyError.invalidRequest("Invalid registration options format"))
+        promise.reject("ERR_INVALID_REQUEST", "Invalid registration options format")
         return
       }
       
@@ -53,13 +52,13 @@ public class ExpoPasskeyModule: Module {
             let userId = userInfo["id"] as? String,
             let userName = userInfo["name"] as? String
       else {
-        promise.reject(PasskeyError.missingParameters("Missing required registration parameters"))
+        promise.reject("ERR_MISSING_PARAMETERS", "Missing required registration parameters")
         return
       }
       
       // Convert base64url challenge to Data
       guard let challengeData = Data(base64URLEncoded: challengeB64) else {
-        promise.reject(PasskeyError.invalidParameter("Invalid challenge format"))
+        promise.reject("ERR_INVALID_PARAMETER", "Invalid challenge format")
         return
       }
       
@@ -130,15 +129,16 @@ public class ExpoPasskeyModule: Module {
       let authController = ASAuthorizationController(authorizationRequests: registrationRequests)
       
       // Create and keep reference to delegate (with iOS 16 availability)
-      self.authDelegateIOS16 = PasskeyAuthorizationDelegate(promise: promise)
-      authController.delegate = self.authDelegateIOS16
+      let passkeyDelegate = PasskeyAuthorizationDelegate(promise: promise)
+      self.authDelegate = passkeyDelegate
+      authController.delegate = passkeyDelegate
       
       // Present authorization UI
       if let viewController = appContext?.utilities?.currentViewController() {
-        authController.presentationContextProvider = self.authDelegateIOS16
+        authController.presentationContextProvider = passkeyDelegate
         authController.performRequests()
       } else {
-        promise.reject(PasskeyError.noViewController("No view controller available"))
+        promise.reject("ERR_NO_VIEW_CONTROLLER", "No view controller available")
       }
     }
     
@@ -146,7 +146,7 @@ public class ExpoPasskeyModule: Module {
     AsyncFunction("authenticateWithPasskey") { (options: [String: Any], promise: Promise) in
       // Runtime check for iOS 16+
       guard #available(iOS 16.0, *) else {
-        promise.reject(PasskeyError.unsupported("Passkeys require iOS 16 or later"))
+        promise.reject("ERR_UNSUPPORTED", "Passkeys require iOS 16 or later")
         return
       }
       
@@ -155,7 +155,7 @@ public class ExpoPasskeyModule: Module {
             let requestData = requestJson.data(using: .utf8),
             let requestOptions = try? JSONSerialization.jsonObject(with: requestData) as? [String: Any]
       else {
-        promise.reject(PasskeyError.invalidRequest("Invalid authentication options format"))
+        promise.reject("ERR_INVALID_REQUEST", "Invalid authentication options format")
         return
       }
       
@@ -163,13 +163,13 @@ public class ExpoPasskeyModule: Module {
       guard let rpId = requestOptions["rpId"] as? String,
             let challengeB64 = requestOptions["challenge"] as? String
       else {
-        promise.reject(PasskeyError.missingParameters("Missing required authentication parameters"))
+        promise.reject("ERR_MISSING_PARAMETERS", "Missing required authentication parameters")
         return
       }
       
       // Convert base64url challenge to Data
       guard let challengeData = Data(base64URLEncoded: challengeB64) else {
-        promise.reject(PasskeyError.invalidParameter("Invalid challenge format"))
+        promise.reject("ERR_INVALID_PARAMETER", "Invalid challenge format")
         return
       }
       
@@ -250,15 +250,16 @@ public class ExpoPasskeyModule: Module {
       let authController = ASAuthorizationController(authorizationRequests: assertionRequests)
       
       // Create and keep reference to delegate (with iOS 16 availability)
-      self.authDelegateIOS16 = PasskeyAuthorizationDelegate(promise: promise)
-      authController.delegate = self.authDelegateIOS16
+      let passkeyDelegate = PasskeyAuthorizationDelegate(promise: promise)
+      self.authDelegate = passkeyDelegate
+      authController.delegate = passkeyDelegate
       
       // Present authorization UI
       if let viewController = appContext?.utilities?.currentViewController() {
-        authController.presentationContextProvider = self.authDelegateIOS16
+        authController.presentationContextProvider = passkeyDelegate
         authController.performRequests()
       } else {
-        promise.reject(PasskeyError.noViewController("No view controller available"))
+        promise.reject("ERR_NO_VIEW_CONTROLLER", "No view controller available")
       }
     }
   }

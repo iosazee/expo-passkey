@@ -20,7 +20,8 @@ class PasskeyAuthorizationDelegate: NSObject, ASAuthorizationControllerDelegate,
       if let credential = authorization.credential as? ASAuthorizationPlatformPublicKeyCredentialRegistration {
         // Handle passkey registration
         guard let attestationObject = credential.rawAttestationObject else {
-          throw PasskeyError.missingData("Missing attestation object in registration response")
+          promise.reject("ERR_MISSING_DATA", "Missing attestation object in registration response")
+          return
         }
         
         // Extract public key from attestation object
@@ -42,7 +43,8 @@ class PasskeyAuthorizationDelegate: NSObject, ASAuthorizationControllerDelegate,
         // Convert to JSON string to match the TypeScript interface
         let jsonData = try JSONSerialization.data(withJSONObject: responseDict, options: [])
         guard let jsonString = String(data: jsonData, encoding: .utf8) else {
-          throw PasskeyError.encodingFailed("Failed to encode response as JSON string")
+          promise.reject("ERR_ENCODING_FAILED", "Failed to encode response as JSON string")
+          return
         }
         
         promise.resolve(jsonString)
@@ -64,14 +66,16 @@ class PasskeyAuthorizationDelegate: NSObject, ASAuthorizationControllerDelegate,
         // Convert to JSON string to match the TypeScript interface
         let jsonData = try JSONSerialization.data(withJSONObject: responseDict, options: [])
         guard let jsonString = String(data: jsonData, encoding: .utf8) else {
-          throw PasskeyError.encodingFailed("Failed to encode response as JSON string")
+          promise.reject("ERR_ENCODING_FAILED", "Failed to encode response as JSON string")
+          return
         }
         
         promise.resolve(jsonString)
       } else if let credential = authorization.credential as? ASAuthorizationSecurityKeyPublicKeyCredentialRegistration {
         // Handle security key registration (cross-platform)
         guard let attestationObject = credential.rawAttestationObject else {
-          throw PasskeyError.missingData("Missing attestation object in registration response")
+          promise.reject("ERR_MISSING_DATA", "Missing attestation object in registration response")
+          return
         }
         
         // Extract public key from attestation object
@@ -96,7 +100,8 @@ class PasskeyAuthorizationDelegate: NSObject, ASAuthorizationControllerDelegate,
         // Convert to JSON string to match the TypeScript interface
         let jsonData = try JSONSerialization.data(withJSONObject: responseDict, options: [])
         guard let jsonString = String(data: jsonData, encoding: .utf8) else {
-          throw PasskeyError.encodingFailed("Failed to encode response as JSON string")
+          promise.reject("ERR_ENCODING_FAILED", "Failed to encode response as JSON string")
+          return
         }
         
         promise.resolve(jsonString)
@@ -118,20 +123,21 @@ class PasskeyAuthorizationDelegate: NSObject, ASAuthorizationControllerDelegate,
         // Convert to JSON string to match the TypeScript interface
         let jsonData = try JSONSerialization.data(withJSONObject: responseDict, options: [])
         guard let jsonString = String(data: jsonData, encoding: .utf8) else {
-          throw PasskeyError.encodingFailed("Failed to encode response as JSON string")
+          promise.reject("ERR_ENCODING_FAILED", "Failed to encode response as JSON string")
+          return
         }
         
         promise.resolve(jsonString)
       } else {
         // Unknown credential type
-        throw PasskeyError.unknownCredentialType("Unknown credential type")
+        promise.reject("ERR_UNKNOWN_CREDENTIAL_TYPE", "Unknown credential type")
       }
     } catch {
       // Handle any errors that occurred during processing
-      if let passkeyError = error as? PasskeyError {
-        promise.reject(passkeyError)
+      if let error = error as? PasskeyError {
+        promise.reject(error.code, error.message)
       } else {
-        promise.reject(PasskeyError.unknown("Failed to process credential: \(error.localizedDescription)"))
+        promise.reject("ERR_UNKNOWN", "Failed to process credential: \(error.localizedDescription)")
       }
     }
   }
@@ -141,34 +147,34 @@ class PasskeyAuthorizationDelegate: NSObject, ASAuthorizationControllerDelegate,
     if let authError = error as? ASAuthorizationError {
       switch authError.code {
       case .canceled:
-        promise.reject(PasskeyError.userCanceled("User canceled the authorization"))
+        promise.reject("ERR_USER_CANCELED", "User canceled the authorization")
       case .notInteractive:
-        promise.reject(PasskeyError.notInteractive("Authentication must be interactive"))
+        promise.reject("ERR_NOT_INTERACTIVE", "Authentication must be interactive")
       case .failed:
-        promise.reject(PasskeyError.authFailed("Authentication failed"))
+        promise.reject("ERR_AUTH_FAILED", "Authentication failed")
       case .invalidResponse:
-        promise.reject(PasskeyError.invalidResponse("Invalid authentication response"))
+        promise.reject("ERR_INVALID_RESPONSE", "Invalid authentication response")
       case .notHandled:
-        promise.reject(PasskeyError.notHandled("Authentication request not handled"))
+        promise.reject("ERR_NOT_HANDLED", "Authentication request not handled")
       case .unknown:
-        promise.reject(PasskeyError.unknown("Unknown authentication error: \(authError.localizedDescription)"))
+        promise.reject("ERR_UNKNOWN", "Unknown authentication error: \(authError.localizedDescription)")
       @unknown default:
-        promise.reject(PasskeyError.unknown("Authentication failed: \(authError.localizedDescription)"))
+        promise.reject("ERR_UNKNOWN", "Authentication failed: \(authError.localizedDescription)")
       }
     } else if let laError = error as? LAError {
       // Handle LocalAuthentication errors
       switch laError.code {
       case .biometryNotAvailable:
-        promise.reject(PasskeyError.biometryUnavailable("Biometric authentication is not available"))
+        promise.reject("ERR_BIOMETRY_UNAVAILABLE", "Biometric authentication is not available")
       case .biometryNotEnrolled:
-        promise.reject(PasskeyError.biometryNotEnrolled("Biometric authentication is not set up"))
+        promise.reject("ERR_BIOMETRY_NOT_ENROLLED", "Biometric authentication is not set up")
       case .biometryLockout:
-        promise.reject(PasskeyError.biometryLockout("Biometric authentication is locked out"))
+        promise.reject("ERR_BIOMETRY_LOCKOUT", "Biometric authentication is locked out")
       default:
-        promise.reject(PasskeyError.biometryFailed("Biometric authentication failed: \(laError.localizedDescription)"))
+        promise.reject("ERR_BIOMETRY_FAILED", "Biometric authentication failed: \(laError.localizedDescription)")
       }
     } else {
-      promise.reject(PasskeyError.unknown("Authentication failed: \(error.localizedDescription)"))
+      promise.reject("ERR_UNKNOWN", "Authentication failed: \(error.localizedDescription)")
     }
   }
   
