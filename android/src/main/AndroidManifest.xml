@@ -1,4 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest package="expo.modules.passkey">
-  <uses-permission android:name="android.permission.INTERNET" />
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="expo.modules.passkey">
+
+    <!-- Add necessary permissions for WebAuthn/passkeys -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <uses-permission android:name="android.permission.USE_FINGERPRINT" />
+
+    <!-- Specify minimum SDK -->
+    <uses-sdk android:minSdkVersion="28" android:targetSdkVersion="35" />
+
+    <application>
+        <!-- No specific application components needed -->
+    </application>
+
 </manifest>

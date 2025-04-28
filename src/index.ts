@@ -5,7 +5,10 @@
  */
 
 // Export the native module
-export { default } from "./ExpoPasskeyModule";
+import ExpoPasskeyModule from "./ExpoPasskeyModule";
+export default ExpoPasskeyModule;
+
+// Export native module types
 export * from "./ExpoPasskeyModule.types";
 
 // Client exports only (no server imports to prevent Metro issues)
