@@ -3,7 +3,7 @@ import AuthenticationServices
 import LocalAuthentication
 
 @objc(ExpoPasskeyModule)
-public class ExpoPasskeyModule: Module {
+public class ExpoPasskeyModule: NSObject, Module {
   // Handle iOS version checks in the methods
   private var authDelegate: NSObject?
   
