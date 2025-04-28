@@ -78,16 +78,12 @@ enum PasskeyError: Error {
 }
 
 // Extension to make PasskeyError compatible with ExpoModulesCore's error handling
-extension PasskeyError: Exception {
-    var exceptionType: ExceptionType {
-        return .jsError
-    }
-    
-    var exceptionName: String {
+extension PasskeyError: ExpoCoreError {
+    var errorCode: String {
         return code
     }
     
-    var reason: String {
+    var errorMessage: String {
         return message
     }
 }

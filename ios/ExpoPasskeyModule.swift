@@ -3,8 +3,9 @@ import AuthenticationServices
 import LocalAuthentication
 
 public class ExpoPasskeyModule: Module {
-  // Store delegate reference to prevent deallocation during auth flow
-  private var authDelegate: PasskeyAuthorizationDelegate?
+  // Store delegate reference conditionally based on iOS version
+  @available(iOS 16.0, *)
+  private var authDelegateIOS16: PasskeyAuthorizationDelegate?
   
   public func definition() -> ModuleDefinition {
     Name("ExpoPasskeyModule")
@@ -112,7 +113,8 @@ public class ExpoPasskeyModule: Module {
         if let pubKeyCredParams = requestOptions["pubKeyCredParams"] as? [[String: Any]] {
           let credentialParameters = pubKeyCredParams.compactMap { param -> ASAuthorizationPublicKeyCredentialParameters? in
             guard let alg = param["alg"] as? Int else { return nil }
-            return ASAuthorizationPublicKeyCredentialParameters(algorithm: COSEAlgorithmIdentifier(rawValue: alg))
+            // Fixed: Use ASCOSEAlgorithmIdentifier directly
+            return ASAuthorizationPublicKeyCredentialParameters(algorithm: ASCOSEAlgorithmIdentifier(alg))
           }
           
           if !credentialParameters.isEmpty {
@@ -127,13 +129,13 @@ public class ExpoPasskeyModule: Module {
       // Create authorization controller with all applicable requests
       let authController = ASAuthorizationController(authorizationRequests: registrationRequests)
       
-      // Create and keep reference to delegate
-      self.authDelegate = PasskeyAuthorizationDelegate(promise: promise)
-      authController.delegate = self.authDelegate
+      // Create and keep reference to delegate (with iOS 16 availability)
+      self.authDelegateIOS16 = PasskeyAuthorizationDelegate(promise: promise)
+      authController.delegate = self.authDelegateIOS16
       
       // Present authorization UI
       if let viewController = appContext?.utilities?.currentViewController() {
-        authController.presentationContextProvider = self.authDelegate
+        authController.presentationContextProvider = self.authDelegateIOS16
         authController.performRequests()
       } else {
         promise.reject(PasskeyError.noViewController("No view controller available"))
@@ -247,13 +249,13 @@ public class ExpoPasskeyModule: Module {
       // Create authorization controller with both request types
       let authController = ASAuthorizationController(authorizationRequests: assertionRequests)
       
-      // Create and keep reference to delegate
-      self.authDelegate = PasskeyAuthorizationDelegate(promise: promise)
-      authController.delegate = self.authDelegate
+      // Create and keep reference to delegate (with iOS 16 availability)
+      self.authDelegateIOS16 = PasskeyAuthorizationDelegate(promise: promise)
+      authController.delegate = self.authDelegateIOS16
       
       // Present authorization UI
       if let viewController = appContext?.utilities?.currentViewController() {
-        authController.presentationContextProvider = self.authDelegate
+        authController.presentationContextProvider = self.authDelegateIOS16
         authController.performRequests()
       } else {
         promise.reject(PasskeyError.noViewController("No view controller available"))

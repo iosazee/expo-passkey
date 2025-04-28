@@ -1,5 +1,6 @@
 import ExpoModulesCore
 import AuthenticationServices
+import LocalAuthentication
 
 // Make the entire class conditionally available for iOS 16+
 @available(iOS 16.0, *)

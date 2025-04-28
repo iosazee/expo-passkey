@@ -1,6 +1,14 @@
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
-apply plugin: 'maven-publishing'
+
+// Only apply maven-publish if the plugin is available
+// This ensures compatibility with both older and newer Gradle versions
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
 
 group = 'expo.modules.passkey'
 version = '0.1.0'
@@ -9,7 +17,12 @@ def expoModulesCorePlugin = new File(project(":expo-modules-core").projectDir.ab
 apply from: expoModulesCorePlugin
 applyKotlinExpoModulesCorePlugin()
 useCoreDependencies()
-useExpoPublishing()
+
+// Check if maven-publish plugin is available before applying
+if (GradleVersion.current().compareTo(GradleVersion.version('4.10.0')) >= 0) {
+    apply plugin: 'maven-publish' // Corrected plugin name
+    useExpoPublishing()
+}
 
 // If you want to use the managed Android SDK versions from expo-modules-core, set this to true.
 // The Android SDK versions will be bumped from time to time in SDK releases and may introduce breaking changes in your module code.
@@ -73,9 +86,13 @@ android {
   lintOptions {
     abortOnError false
   }
-  publishing {
-    singleVariant("release") {
-      withSourcesJar()
+  
+  // Only set up publishing if maven-publish plugin is available
+  if (GradleVersion.current().compareTo(GradleVersion.version('4.10.0')) >= 0) {
+    publishing {
+      singleVariant("release") {
+        withSourcesJar()
+      }
     }
   }
 }
