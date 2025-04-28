@@ -22,10 +22,8 @@ try {
     useExpoPublishing()
 } catch (Exception e) {
     logger.warn("Failed to apply Expo publishing: ${e.message}")
-    // Only apply maven-publish as fallback if useExpoPublishing fails
     if (GradleVersion.current().compareTo(GradleVersion.version('4.10.0')) >= 0) {
         apply plugin: 'maven-publish'
-        // Minimal publishing configuration as fallback
         afterEvaluate {
             publishing {
                 publications {
@@ -38,20 +36,15 @@ try {
     }
 }
 
-// If you want to use the managed Android SDK versions from expo-modules-core, set this to true.
-// The Android SDK versions will be bumped from time to time in SDK releases and may introduce breaking changes in your module code.
-// Most of the time, you may like to manage the Android SDK versions yourself.
+// Set manually managed SDK versions
 def useManagedAndroidSdkVersions = false
 if (useManagedAndroidSdkVersions) {
     useDefaultAndroidSdkVersions()
 } else {
     buildscript {
-        // Simple helper that allows the root project to override versions declared by this library.
         ext.safeExtGet = { prop, fallback ->
             rootProject.ext.has(prop) ? rootProject.ext.get(prop) : fallback
         }
-        
-        // Ensures backward compatibility
         ext.getKotlinVersion = {
             if (ext.has("kotlinVersion")) {
                 ext.kotlinVersion()
@@ -59,11 +52,9 @@ if (useManagedAndroidSdkVersions) {
                 ext.safeExtGet("kotlinVersion", "1.8.10")
             }
         }
-        
         repositories {
             mavenCentral()
         }
-        
         dependencies {
             classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:${getKotlinVersion()}")
         }
@@ -71,37 +62,28 @@ if (useManagedAndroidSdkVersions) {
 }
 
 android {
-    compileSdkVersion safeExtGet("compileSdkVersion", 33)
+    namespace "expo.modules.passkey"
+    compileSdkVersion safeExtGet("compileSdkVersion", 34)
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
 
-    def agpVersion = com.android.Version.ANDROID_GRADLE_PLUGIN_VERSION
-    if (agpVersion.tokenize('.')[0].toInteger() < 8) {
-        compileOptions {
-            sourceCompatibility JavaVersion.VERSION_17
-            targetCompatibility JavaVersion.VERSION_17
-        }
-
-        kotlinOptions {
-            jvmTarget = JavaVersion.VERSION_17.majorVersion
-        }
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_17.majorVersion
     }
 
-    namespace "expo.modules.passkey"
     defaultConfig {
-        minSdkVersion safeExtGet("minSdkVersion", 29)
+        minSdkVersion safeExtGet("minSdkVersion", 28) // Expo Passkey needs Android 9+ (API 28)
         targetSdkVersion safeExtGet("targetSdkVersion", 34)
         versionCode 1
         versionName "0.1.0"
     }
+
     lintOptions {
         abortOnError false
     }
-    
-    // No publishing configuration here - it's handled by useExpoPublishing()
 }
 
 repositories {
@@ -111,13 +93,12 @@ repositories {
 
 dependencies {
     implementation project(':expo-modules-core')
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:${getKotlinVersion()}"
-    
-    // WebAuthn dependencies
-    implementation "androidx.credentials:credentials:1.3.0"
-    implementation "androidx.credentials:credentials-play-services-auth:1.3.0"
-    
-    // JSON parsing 
+
+    // WebAuthn and Credentials dependencies
+    implementation "androidx.credentials:credentials:1.2.0-alpha02"
+    implementation "androidx.credentials:credentials-play-services-auth:1.2.0-alpha02"
+
+    // JSON parsing
     implementation "org.json:json:20231013"
     implementation "com.google.code.gson:gson:2.10.1"
 }
