@@ -67,16 +67,24 @@ export const createChallengeEndpoint = (options: {
       },
     },
     async (ctx) => {
-      const { userId, type, registrationOptions } = ctx.body;
+      const { type, registrationOptions } = ctx.body;
+      let userId: string;
 
       try {
-        logger.debug("Generating WebAuthn challenge:", {
-          userId,
-          type,
-        });
-
-        // Verify user exists (for registration)
+        // For registration challenges, userId MUST come from authenticated session
         if (type === "registration") {
+          if (!ctx.context.session?.user?.id) {
+            logger.warn("Registration challenge requires authentication", {
+              hasSession: !!ctx.context.session,
+            });
+            throw new APIError("UNAUTHORIZED", {
+              code: "SESSION_REQUIRED",
+              message: "You must be logged in to register a passkey",
+            });
+          }
+          userId = ctx.context.session.user.id;
+
+          // Verify user exists
           const user = await ctx.context.adapter.findOne({
             model: "user",
             where: [{ field: "id", operator: "eq", value: userId }],
@@ -91,7 +99,15 @@ export const createChallengeEndpoint = (options: {
               message: "User not found",
             });
           }
+        } else {
+          // For authentication challenges, userId can be provided by client or omitted for discoverable credentials
+          userId = ctx.body.userId || "anonymous";
         }
+
+        logger.debug("Generating WebAuthn challenge:", {
+          userId,
+          type,
+        });
 
         // Generate a random challenge with sufficient entropy
         const randomBytes = crypto.randomBytes(32);

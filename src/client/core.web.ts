@@ -110,7 +110,7 @@ export const expoPasskeyClient = (options: ExpoPasskeyClientOptions = {}) => {
     getActions: ($fetch) => {
       const getChallenge = async (
         data: {
-          userId: string;
+          userId?: string; // Optional - only used for authentication challenges
           type: "registration" | "authentication";
           registrationOptions?: {
             attestation?: "none" | "indirect" | "direct" | "enterprise";
@@ -130,7 +130,7 @@ export const expoPasskeyClient = (options: ExpoPasskeyClientOptions = {}) => {
             await $fetch<ChallengeResponse>("/expo-passkey/challenge", {
               method: "POST",
               body: {
-                userId: data.userId,
+                ...(data.userId && { userId: data.userId }), // Only include if provided
                 type: data.type,
                 registrationOptions: data.registrationOptions,
               },
@@ -201,8 +201,8 @@ export const expoPasskeyClient = (options: ExpoPasskeyClientOptions = {}) => {
             };
 
             // Get challenge from server
+            // Note: userId is no longer sent to server for security - server gets it from session
             const challengeResult = await getChallenge({
-              userId: data.userId,
               type: "registration",
               registrationOptions,
             });
@@ -241,13 +241,13 @@ export const expoPasskeyClient = (options: ExpoPasskeyClientOptions = {}) => {
             });
 
             // Register with server
+            // Note: userId is no longer sent to server for security - server gets it from session
             const { data: registrationData, error: registrationError } =
               await $fetch<RegisterPasskeySuccessResponse>(
                 "/expo-passkey/register",
                 {
                   method: "POST",
                   body: {
-                    userId: data.userId,
                     credential,
                     platform: "web",
                     metadata: {
@@ -434,19 +434,18 @@ export const expoPasskeyClient = (options: ExpoPasskeyClientOptions = {}) => {
          */
         revokePasskey: async (
           data: {
-            userId: string;
             credentialId: string;
             reason?: string;
           },
           fetchOptions?: BetterFetchOption
         ): Promise<RevokePasskeyResult> => {
           try {
+            // Note: userId is no longer sent to server for security - server gets it from session
             const { data: revokeData, error: revokeError } = await $fetch<{
               success: boolean;
             }>("/expo-passkey/revoke", {
               method: "POST",
               body: {
-                userId: data.userId,
                 credentialId: data.credentialId,
                 reason: data.reason,
               },

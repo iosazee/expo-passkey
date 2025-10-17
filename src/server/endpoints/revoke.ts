@@ -3,7 +3,7 @@
  * @description Implementation of the endpoint to revoke a WebAuthn passkey
  */
 
-import { createAuthEndpoint } from "better-auth/api";
+import { createAuthEndpoint, sessionMiddleware } from "better-auth/api";
 import { APIError } from "better-call";
 
 import { ERROR_CODES, ERROR_MESSAGES } from "../../types/errors";
@@ -26,6 +26,7 @@ export const createRevokeEndpoint = (options: {
     {
       method: "POST",
       body: revokePasskeySchema,
+      use: [sessionMiddleware],
       metadata: {
         openapi: {
           description: "Revoke a registered WebAuthn passkey",
@@ -68,7 +69,20 @@ export const createRevokeEndpoint = (options: {
       },
     },
     async (ctx) => {
-      const { userId, credentialId, reason } = ctx.body;
+      const { credentialId, reason } = ctx.body;
+
+      // Get userId from authenticated session
+      if (!ctx.context.session?.user?.id) {
+        logger.warn("Revocation requires authentication", {
+          hasSession: !!ctx.context.session,
+        });
+        throw new APIError("UNAUTHORIZED", {
+          code: "SESSION_REQUIRED",
+          message: "You must be logged in to revoke a passkey",
+        });
+      }
+
+      const userId = ctx.context.session.user.id;
 
       try {
         logger.debug("Revoking passkey", { userId, credentialId });

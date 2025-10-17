@@ -47,7 +47,6 @@ describe("registerPasskey endpoint", () => {
     // Create fresh mock context for each test
     mockCtx = {
       body: {
-        userId: "user-123",
         credential: {
           id: "test-credential-id",
           rawId: "test-raw-id",
@@ -73,6 +72,11 @@ describe("registerPasskey endpoint", () => {
           delete: jest.fn(),
         },
         generateId: jest.fn(() => "generated-id"),
+        session: {
+          user: {
+            id: "user-123",
+          },
+        },
       },
       json: jest.fn(),
     };

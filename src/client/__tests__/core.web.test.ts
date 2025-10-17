@@ -666,7 +666,6 @@ describe("core.web - ExpoPasskeyClient", () => {
       const actions = plugin.getActions(mockFetch);
 
       const result = await actions.revokePasskey({
-        userId: "user123",
         credentialId: "cred123",
         reason: "Device lost",
       });
@@ -676,7 +675,6 @@ describe("core.web - ExpoPasskeyClient", () => {
       expect(mockFetch).toHaveBeenCalledWith("/expo-passkey/revoke", {
         method: "POST",
         body: {
-          userId: "user123",
           credentialId: "cred123",
           reason: "Device lost",
         },
@@ -693,7 +691,6 @@ describe("core.web - ExpoPasskeyClient", () => {
       const actions = plugin.getActions(mockFetch);
 
       const result = await actions.revokePasskey({
-        userId: "user123",
         credentialId: "cred123",
       });
 
@@ -711,7 +708,6 @@ describe("core.web - ExpoPasskeyClient", () => {
       const actions = plugin.getActions(mockFetch);
 
       const result = await actions.revokePasskey({
-        userId: "user123",
         credentialId: "cred123",
       });
 

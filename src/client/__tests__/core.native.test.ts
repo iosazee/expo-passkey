@@ -439,7 +439,6 @@ describe("Expo Passkey Client", () => {
         const { actions } = createTestPlugin();
 
         const result = await actions.revokePasskey({
-          userId: "user123",
           credentialId: "cred-id-123",
           reason: "lost_device",
         });

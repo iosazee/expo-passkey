@@ -29,18 +29,22 @@ export type RegistrationOptions = z.infer<typeof registrationOptionsSchema>;
 
 /**
  * Schema for WebAuthn challenge requests
+ * Note: userId is no longer accepted from client for security.
+ * For registration challenges, userId is obtained from the authenticated session.
+ * For authentication challenges, userId can be optionally provided or omitted for discoverable credentials.
  */
 export const challengeSchema = z.object({
-  userId: z.string(),
   type: z.enum(["registration", "authentication"]),
+  userId: z.string().optional(), // Only used for authentication challenges
   registrationOptions: registrationOptionsSchema.optional(),
 });
 
 /**
  * Schema for WebAuthn passkey registration requests
+ * Note: userId is obtained from the authenticated session for security.
+ * Client should not provide userId.
  */
 export const registerPasskeySchema = z.object({
-  userId: z.string(),
   credential: z.object({
     id: z.string(),
     rawId: z.string(),
@@ -115,9 +119,10 @@ export const listPasskeysParamsSchema = z.object({
 
 /**
  * Schema for passkey revocation requests
+ * Note: userId is obtained from the authenticated session for security.
+ * Client should not provide userId.
  */
 export const revokePasskeySchema = z.object({
-  userId: z.string(),
   credentialId: z.string(),
   reason: z.string().optional(),
 });

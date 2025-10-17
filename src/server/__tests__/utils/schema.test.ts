@@ -148,7 +148,6 @@ describe("Schema definitions", () => {
   describe("revokePasskeySchema", () => {
     it("should validate correct data", () => {
       const validData = {
-        userId: "user-123",
         credentialId: "credential-123",
         reason: "lost_device",
       };
@@ -159,7 +158,6 @@ describe("Schema definitions", () => {
 
     it("should allow omitting reason", () => {
       const dataWithoutReason = {
-        userId: "user-123",
         credentialId: "credential-123",
       };
 
@@ -168,20 +166,17 @@ describe("Schema definitions", () => {
     });
 
     it("should reject missing required fields", () => {
-      // Missing userId
-      const invalidData1 = {
-        credentialId: "credential-123",
+      // Missing credentialId (only required field now)
+      const invalidData = {
+        reason: "test",
       };
 
-      const result1 = revokePasskeySchema.safeParse(invalidData1);
-      expect(result1.success).toBe(false);
+      const result = revokePasskeySchema.safeParse(invalidData);
+      expect(result.success).toBe(false);
 
-      // Missing credentialId
-      const invalidData2 = {
-        userId: "user-123",
-      };
-
-      const result2 = revokePasskeySchema.safeParse(invalidData2);
+      // Empty object should also fail
+      const emptyData = {};
+      const result2 = revokePasskeySchema.safeParse(emptyData);
       expect(result2.success).toBe(false);
     });
   });

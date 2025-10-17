@@ -3,7 +3,7 @@
  * @description WebAuthn-based implementation for passkey registration with client preferences support
  */
 
-import { createAuthEndpoint } from "better-auth/api";
+import { createAuthEndpoint, sessionMiddleware } from "better-auth/api";
 import { APIError } from "better-call";
 import {
   verifyRegistrationResponse,
@@ -59,6 +59,7 @@ export const createRegisterEndpoint = (options: {
     {
       method: "POST",
       body: registerPasskeySchema,
+      use: [sessionMiddleware],
       metadata: {
         openapi: {
           description: "Register a new passkey using WebAuthn",
@@ -103,7 +104,20 @@ export const createRegisterEndpoint = (options: {
       },
     },
     async (ctx) => {
-      const { userId, credential, platform, metadata } = ctx.body;
+      const { credential, platform, metadata } = ctx.body;
+
+      // Get userId from authenticated session
+      if (!ctx.context.session?.user?.id) {
+        logger.warn("Registration requires authentication", {
+          hasSession: !!ctx.context.session,
+        });
+        throw new APIError("UNAUTHORIZED", {
+          code: "SESSION_REQUIRED",
+          message: "You must be logged in to register a passkey",
+        });
+      }
+
+      const userId = ctx.context.session.user.id;
 
       try {
         logger.debug("WebAuthn registration attempt:", {

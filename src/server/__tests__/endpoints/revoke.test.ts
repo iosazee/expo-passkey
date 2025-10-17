@@ -29,7 +29,6 @@ describe("revokePasskey endpoint", () => {
   // Mock request context
   const mockCtx = {
     body: {
-      userId: "user-123",
       credentialId: "credential-123",
       reason: "lost_device",
     },
@@ -37,6 +36,11 @@ describe("revokePasskey endpoint", () => {
       adapter: {
         findOne: jest.fn(),
         update: jest.fn(),
+      },
+      session: {
+        user: {
+          id: "user-123",
+        },
       },
     },
     json: jest.fn(),
