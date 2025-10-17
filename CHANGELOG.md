@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2025-10-17
+
+### 🔒 Security
+
+**CRITICAL**: Fixed account takeover vulnerability. Server now validates `userId` from authenticated session instead of accepting it from client requests.
+
+### ⚠️ Breaking Changes
+
+- `revokePasskey()` no longer accepts `userId` parameter
+- Registration and revocation require authenticated sessions
+- Endpoints return 401 if session is missing
+
+### Migration
+
+```typescript
+// Before
+await revokePasskey({ userId: "user-123", credentialId: "cred-123" });
+
+// After
+await revokePasskey({ credentialId: "cred-123" });
+```
+
+Users must authenticate before registering passkeys. `registerPasskey()` API unchanged.
+
+### Changes
+
+- Add session middleware to register/revoke endpoints
+- Remove userId from client request schemas
+- Update documentation with authentication requirements
+- Update all tests with session mocks
+
+---
+
 ## [0.2.0] - 2025-06-25
 
 ### 🎉 Major Features
