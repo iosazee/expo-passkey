@@ -3,7 +3,7 @@
  * @description Creates and stores challenges for WebAuthn registration and authentication
  */
 
-import { createAuthEndpoint } from "better-auth/api";
+import { createAuthEndpoint, sessionMiddleware } from "better-auth/api";
 import { APIError } from "better-call";
 import crypto from "crypto";
 import type { ResolvedSchemaConfig } from "../../types";
@@ -24,6 +24,7 @@ export const createChallengeEndpoint = (options: {
     {
       method: "POST",
       body: challengeSchema,
+      use: [sessionMiddleware],
       metadata: {
         openapi: {
           description:
@@ -101,7 +102,7 @@ export const createChallengeEndpoint = (options: {
           }
         } else {
           // For authentication challenges, userId can be provided by client or omitted for discoverable credentials
-          userId = ctx.body.userId || "anonymous";
+          userId = ctx.body.userId || "auto-discovery";
         }
 
         logger.debug("Generating WebAuthn challenge:", {

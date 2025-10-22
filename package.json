@@ -1,6 +1,6 @@
 {
   "name": "expo-passkey",
-  "version": "0.3.0",
+  "version": "0.3.4",
   "description": "Passkey authentication for Expo apps with Better Auth integration",
   "type": "module",
   "main": "build/index.js",
