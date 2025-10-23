@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.6] - 2025-10-23
+
+### 🐛 Bug Fixes
+
+**CRITICAL**: Fixed authentication challenge endpoint failing with `401 Unauthorized` for unauthenticated users. Implemented conditional middleware that enforces session requirement only for registration challenges while allowing authentication challenges without session.
+
+---
+
 ## [0.3.4] - 2025-10-22
 
 ### 🐛 Bug Fixes
