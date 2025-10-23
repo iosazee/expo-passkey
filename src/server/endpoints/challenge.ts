@@ -3,7 +3,7 @@
  * @description Creates and stores challenges for WebAuthn registration and authentication
  */
 
-import { createAuthEndpoint, sessionMiddleware } from "better-auth/api";
+import { createAuthEndpoint, getSessionFromCtx } from "better-auth/api";
 import { APIError } from "better-call";
 import crypto from "crypto";
 import type { ResolvedSchemaConfig } from "../../types";
@@ -11,20 +11,27 @@ import type { Logger } from "../utils/logger";
 import { challengeSchema } from "../utils/schema";
 
 /**
+ * Session fetcher that can be overridden in tests
+ * @internal
+ */
+export const _getSession = getSessionFromCtx;
+
+/**
  * Creates a WebAuthn challenge endpoint for registration and authentication
  */
 export const createChallengeEndpoint = (options: {
   logger: Logger;
   schemaConfig: ResolvedSchemaConfig;
+  /** @internal For testing only */
+  _sessionFetcher?: typeof getSessionFromCtx;
 }) => {
-  const { logger, schemaConfig } = options;
+  const { logger, schemaConfig, _sessionFetcher = _getSession } = options;
 
   return createAuthEndpoint(
     "/expo-passkey/challenge",
     {
       method: "POST",
       body: challengeSchema,
-      use: [sessionMiddleware],
       metadata: {
         openapi: {
           description:
@@ -72,18 +79,21 @@ export const createChallengeEndpoint = (options: {
       let userId: string;
 
       try {
+        // Manually fetch session without requiring it
+        const session = await _sessionFetcher(ctx);
+
         // For registration challenges, userId MUST come from authenticated session
         if (type === "registration") {
-          if (!ctx.context.session?.user?.id) {
+          if (!session?.user?.id) {
             logger.warn("Registration challenge requires authentication", {
-              hasSession: !!ctx.context.session,
+              hasSession: !!session,
             });
             throw new APIError("UNAUTHORIZED", {
               code: "SESSION_REQUIRED",
               message: "You must be logged in to register a passkey",
             });
           }
-          userId = ctx.context.session.user.id;
+          userId = session.user.id;
 
           // Verify user exists
           const user = await ctx.context.adapter.findOne({

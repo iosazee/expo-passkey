@@ -16,12 +16,16 @@ const defaultSchemaConfig: ResolvedSchemaConfig = {
   passkeyChallengeModel: "passkeyChallenge",
 };
 
+// Create a mock session fetcher
+const mockSessionFetcher = jest.fn();
+
 type EndpointHandler = (ctx: any) => Promise<any>;
 
 describe("challenge endpoint", () => {
   const options = {
     logger: mockLogger,
     schemaConfig: defaultSchemaConfig,
+    _sessionFetcher: mockSessionFetcher,
   };
 
   let mockCtx: any;
@@ -32,6 +36,11 @@ describe("challenge endpoint", () => {
     // Create fresh mock context for each test
     mockCtx = {
       body: {},
+      request: {
+        headers: {
+          get: jest.fn(() => "session-cookie-value"),
+        },
+      },
       context: {
         adapter: {
           findOne: jest.fn(),
@@ -50,6 +59,9 @@ describe("challenge endpoint", () => {
       },
       json: jest.fn((data) => data),
     };
+
+    // Configure mock session fetcher to return session from mockCtx
+    mockSessionFetcher.mockImplementation(async () => mockCtx.context.session);
   });
 
   describe("registration challenges", () => {
@@ -132,6 +144,43 @@ describe("challenge endpoint", () => {
   });
 
   describe("authentication challenges", () => {
+    it("should generate authentication challenge without session (unauthenticated user)", async () => {
+      // Remove session to simulate unauthenticated user trying to log in
+      mockCtx.context.session = undefined;
+
+      mockCtx.body = {
+        type: "authentication",
+      };
+
+      // Mock challenge creation
+      mockCtx.context.adapter.create.mockResolvedValueOnce({
+        id: "generated-challenge-id",
+        userId: "auto-discovery",
+        challenge: expect.any(String),
+        type: "authentication",
+      });
+
+      const endpoint = createChallengeEndpoint(options);
+      const handler = (endpoint as any).handler as EndpointHandler;
+
+      // Should NOT throw error even without session
+      const result = await handler(mockCtx);
+
+      // Verify challenge was created with "auto-discovery" userId
+      expect(mockCtx.context.adapter.create).toHaveBeenCalledWith({
+        model: "passkeyChallenge",
+        data: expect.objectContaining({
+          userId: "auto-discovery",
+          type: "authentication",
+        }),
+        forceAllowId: true,
+      });
+
+      expect(result).toEqual({
+        challenge: expect.any(String),
+      });
+    });
+
     it("should generate authentication challenge with auto-discovery when no userId provided", async () => {
       mockCtx.body = {
         type: "authentication",
