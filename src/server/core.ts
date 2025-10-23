@@ -3,7 +3,7 @@
  * @description Core implementation of the Expo Passkey server plugin with WebAuthn support
  */
 
-import { createAuthEndpoint } from "better-auth/api";
+import { createAuthEndpoint, getSessionFromCtx } from "better-auth/api";
 import type { AuthContext, BetterAuthPlugin } from "better-auth/types";
 import { APIError } from "better-call";
 
@@ -246,6 +246,47 @@ export const expoPasskey = (options: ExpoPasskeyOptions): BetterAuthPlugin => {
 
     // Middleware for all expo-passkey endpoints
     middlewares: [
+      // Conditional session middleware for challenge endpoint
+      {
+        path: "/expo-passkey/challenge",
+        middleware: createAuthEndpoint(
+          "/expo-passkey/challenge-guard",
+          {
+            method: "POST",
+          },
+          async (ctx) => {
+            const body = ctx.body as { type?: string };
+
+            // For registration challenges, require session
+            if (body?.type === "registration") {
+              let session;
+              try {
+                session = await getSessionFromCtx(ctx);
+              } catch (sessionError) {
+                logger.debug("Session fetch failed for registration challenge", {
+                  error:
+                    sessionError instanceof Error
+                      ? sessionError.message
+                      : String(sessionError),
+                });
+                session = null;
+              }
+
+              if (!session?.user?.id) {
+                logger.warn("Registration challenge requires authentication");
+                throw new APIError("UNAUTHORIZED", {
+                  code: "SESSION_REQUIRED",
+                  message: "You must be logged in to register a passkey",
+                });
+              }
+            }
+
+            // For authentication challenges, allow without session
+            // No action needed - request continues to endpoint handler
+          },
+        ),
+      },
+      // Origin validation for all expo-passkey endpoints
       {
         path: "/expo-passkey/**",
         middleware: createAuthEndpoint(

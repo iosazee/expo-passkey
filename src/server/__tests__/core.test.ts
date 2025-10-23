@@ -293,7 +293,14 @@ describe("expoPasskey server plugin", () => {
     };
 
     expect(plugin.middlewares).toBeDefined();
-    expect(plugin.middlewares?.[0].path).toBe("/expo-passkey/**");
+    expect(plugin.middlewares).toHaveLength(2);
+
+    // First middleware: conditional session check for challenge endpoint
+    expect(plugin.middlewares?.[0].path).toBe("/expo-passkey/challenge");
     expect(plugin.middlewares?.[0].middleware).toBeDefined();
+
+    // Second middleware: origin validation for all endpoints
+    expect(plugin.middlewares?.[1].path).toBe("/expo-passkey/**");
+    expect(plugin.middlewares?.[1].middleware).toBeDefined();
   });
 });

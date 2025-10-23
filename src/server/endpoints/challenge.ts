@@ -79,8 +79,19 @@ export const createChallengeEndpoint = (options: {
       let userId: string;
 
       try {
-        // Manually fetch session without requiring it
-        const session = await _sessionFetcher(ctx);
+        // Manually fetch session without requiring it (returns null if no session)
+        let session;
+        try {
+          session = await _sessionFetcher(ctx);
+        } catch (sessionError) {
+          // getSessionFromCtx may throw an error if session is invalid
+          // For authentication challenges, this is acceptable (user not logged in yet)
+          logger.debug("Session fetch failed (acceptable for auth challenges)", {
+            type,
+            error: sessionError instanceof Error ? sessionError.message : String(sessionError),
+          });
+          session = null;
+        }
 
         // For registration challenges, userId MUST come from authenticated session
         if (type === "registration") {
