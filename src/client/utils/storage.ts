@@ -19,6 +19,7 @@ export interface CredentialMetadata {
   displayName?: string;
   crossPlatform?: boolean; // Whether this credential was created on a different platform
   originalPlatform?: string; // Platform where credential was originally created
+  createdOnThisDevice?: boolean; // Whether this credential was created on THIS specific device
 }
 
 // Helper function to get modules only when needed
