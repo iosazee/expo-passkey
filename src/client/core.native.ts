@@ -405,18 +405,13 @@ export const expoPasskeyClient = (options: ExpoPasskeyClientOptions = {}) => {
               );
 
               // If userId is provided, only include credentials for that user
+              // Otherwise, leave empty for discoverable credential flow (shows account picker)
               if (data?.userId) {
                 const userCredentialIds = await getUserCredentialIds(
                   data.userId,
                   client.getOptions()
                 );
                 allowCredentials = userCredentialIds.map((id) => ({
-                  id,
-                  type: "public-key",
-                }));
-              } else {
-                // Otherwise include all credentials
-                allowCredentials = Object.keys(storedCredentials).map((id) => ({
                   id,
                   type: "public-key",
                 }));
