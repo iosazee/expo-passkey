@@ -9,7 +9,7 @@
 
 This is a cross-platform Expo module and Better Auth plugin that brings passkey authentication to your Expo apps on **web, iOS, and Android**. Features a unified passkey table structure that works seamlessly across all platforms, making it perfect for both universal apps using react-native-web and projects with separate mobile and web frontends.
 
-> **🚀 v0.2.0**: Now includes web support, unified table structure, **client-controlled WebAuthn preferences**, and enhanced cross-platform passkey syncing!
+> **🚀 v0.3.6**: Now includes web support, unified table structure, **client-controlled WebAuthn preferences**, enhanced cross-platform passkey syncing, and **session-validated security** for registration and revocation!
 
 ## 📱 Example Project
 
@@ -315,13 +315,15 @@ export const authClient = createAuthClient({
     }),
     expoPasskeyClient({
       storagePrefix: "your_app",
+      rpId: "example.com",        // Recommended for native - prevents authentication errors
+      timeout: 60000,              // Optional: WebAuthn operation timeout (default: 60000ms)
     }),
     // ... other plugins
   ],
 });
 
-export const { 
-  registerPasskey, 
+export const {
+  registerPasskey,
   authenticateWithPasskey,
   listPasskeys,
   revokePasskey,
@@ -339,14 +341,17 @@ import { expoPasskeyClient } from "expo-passkey/web";
 export const authClient = createAuthClient({
   baseURL: process.env.NEXT_PUBLIC_APP_URL,
   plugins: [
-    expoPasskeyClient(),
+    expoPasskeyClient({
+      rpId: "example.com",        // Optional - auto-detected from window.location.hostname
+      timeout: 60000,              // Optional: WebAuthn operation timeout (default: 60000ms)
+    }),
     // ... other plugins
   ],
 });
 
-export const { 
+export const {
   isPlatformAuthenticatorAvailable,
-  registerPasskey, 
+  registerPasskey,
   authenticateWithPasskey,
   listPasskeys,
   revokePasskey,
@@ -358,9 +363,59 @@ export const {
 
 ### Client API
 
+#### Client Options
+
+Configure the passkey client when initializing:
+
+```typescript
+interface ExpoPasskeyClientOptions {
+  /**
+   * Prefix for storage keys
+   * @default '_better-auth'
+   */
+  storagePrefix?: string;
+
+  /**
+   * Timeout for WebAuthn operations in milliseconds
+   * @default 60000 (1 minute)
+   */
+  timeout?: number;
+
+  /**
+   * Relying Party ID - the domain of your application
+   * @default window.location.hostname (web) or undefined (native)
+   * @example 'example.com'
+   *
+   * IMPORTANT: For native apps, this should match your server's rpId.
+   * Can be overridden per-operation by passing rpId to registerPasskey()
+   * or authenticateWithPasskey().
+   */
+  rpId?: string;
+}
+```
+
+**Native App Example:**
+```typescript
+expoPasskeyClient({
+  storagePrefix: "myapp",
+  rpId: "example.com",     // Required for reliable native auth
+  timeout: 60000,
+})
+```
+
+**Web App Example:**
+```typescript
+expoPasskeyClient({
+  rpId: "example.com",     // Optional - auto-detected from URL
+  timeout: 60000,
+})
+```
+
 #### `registerPasskey(options): Promise<RegisterPasskeyResult>`
 
 Registers a new passkey for a user with full client preference control.
+
+**⚠️ Authentication Required**: User must be authenticated before calling this function. The server validates the userId from the active session.
 
 ```typescript
 interface RegisterOptions {
@@ -429,6 +484,70 @@ interface AuthenticatePasskeyResult {
     };
   } | null;
   error: Error | null;
+}
+```
+
+#### `listPasskeys(options): Promise<ListPasskeysResult>`
+
+Retrieve all registered passkeys for a user.
+
+**⚠️ Authentication Required**: User must be authenticated before calling this function.
+
+```typescript
+interface ListPasskeysOptions {
+  userId: string;          // Required: User ID to list passkeys for
+  limit?: number;          // Optional: Maximum number of passkeys to return
+  offset?: number;         // Optional: Offset for pagination
+}
+
+interface ListPasskeysResult {
+  data: {
+    passkeys: Array<{
+      id: string;
+      userId: string;
+      credentialId: string;
+      platform: string;
+      lastUsed: string;
+      status: "active" | "revoked";
+      createdAt: string;
+      metadata: Record<string, unknown>;
+    }>;
+    nextOffset?: number;
+  } | null;
+  error: Error | null;
+}
+```
+
+#### `revokePasskey(options): Promise<RevokePasskeyResult>`
+
+Revoke a passkey, preventing it from being used for authentication.
+
+**⚠️ Authentication Required**: User must be authenticated before calling this function. The server validates ownership from the active session.
+
+**🔐 Security Note**: As of v0.3.0, userId is no longer accepted from the client for security. The server validates that the user owns the passkey being revoked.
+
+```typescript
+interface RevokePasskeyOptions {
+  credentialId: string;    // Required: Credential ID to revoke
+  reason?: string;         // Optional: Reason for revocation
+}
+
+interface RevokePasskeyResult {
+  data: { success: boolean } | null;
+  error: Error | null;
+}
+```
+
+**Example:**
+```typescript
+// Revoke a passkey
+const result = await revokePasskey({
+  credentialId: "credential-id-123",
+  reason: "User requested removal"
+});
+
+if (result.data?.success) {
+  console.log("Passkey revoked successfully");
 }
 ```
 
@@ -786,9 +905,30 @@ Optimizing database performance is essential to get the best out of the Expo Pas
 
 ## Security Considerations
 
-- **Client Preference Enforcement**: Server now enforces client-specified security requirements
+### Session-Based Validation (v0.3.0+)
+
+**Critical Security Enhancement**: The plugin now validates userId from the authenticated session instead of accepting it from client requests. This prevents account takeover attacks where malicious clients could register passkeys for other users.
+
+- **Registration**: Requires active session. Server extracts userId from session token, not client request.
+- **Revocation**: Requires active session. Server validates ownership before allowing revocation.
+- **Authentication**: Does not require session (users authenticate to create a session).
+
+**Migration from v0.2.x**:
+```typescript
+// Before v0.3.0 (VULNERABLE - don't use)
+await revokePasskey({ userId: "user-123", credentialId: "cred-123" });
+
+// After v0.3.0 (SECURE)
+await revokePasskey({ credentialId: "cred-123" });
+// userId is automatically validated from the session
+```
+
+### Additional Security Measures
+
+- **Client Preference Enforcement**: Server enforces client-specified security requirements
 - **Cross-Platform Security**: Passkeys maintain the same security properties across platforms
 - **Domain Verification**: Ensure proper domain verification for both web and mobile
+- **Relying Party ID**: Configure `rpId` correctly to prevent cross-domain attacks
 - **Portable Passkeys**: iCloud Keychain and Google Password Manager sync passkeys securely
 - **Hardware Keys**: Support for hardware security keys across all platforms
 - **Attestation Handling**: Proper support for enterprise attestation requirements
