@@ -22,6 +22,13 @@ export interface ExpoPasskeyClientOptions {
    * @default 60000 (1 minute)
    */
   timeout?: number;
+
+  /**
+   * Relying Party ID - the domain of your application
+   * @default window.location.hostname (web) or undefined (native)
+   * @example 'example.com'
+   */
+  rpId?: string;
 }
 
 /**
