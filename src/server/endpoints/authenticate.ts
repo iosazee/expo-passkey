@@ -151,7 +151,7 @@ export const createAuthenticateEndpoint = (options: {
           ...autoDiscoveryChallenges,
         ].sort(
           (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
 
         const storedChallenge = allChallenges[0];
@@ -197,8 +197,9 @@ export const createAuthenticateEndpoint = (options: {
           };
 
           // Verify the authentication response
-          const verification =
-            await verifyAuthenticationResponse(verificationOptions);
+          const verification = await verifyAuthenticationResponse(
+            verificationOptions
+          );
 
           if (!verification.verified) {
             throw new Error("Verification failed");
@@ -251,7 +252,7 @@ export const createAuthenticateEndpoint = (options: {
           const sessionToken = await ctx.context.internalAdapter.createSession(
             user.id,
             ctx,
-            false,
+            false
           );
 
           // Get session configuration from context
@@ -312,12 +313,14 @@ export const createAuthenticateEndpoint = (options: {
         }
       } catch (error) {
         logger.error("Authentication error:", error);
-        if (error instanceof APIError) {throw error;}
+        if (error instanceof APIError) {
+          throw error;
+        }
         throw new APIError("UNAUTHORIZED", {
           code: ERROR_CODES.SERVER.AUTHENTICATION_FAILED,
           message: ERROR_MESSAGES[ERROR_CODES.SERVER.AUTHENTICATION_FAILED],
         });
       }
-    },
+    }
   );
 };
