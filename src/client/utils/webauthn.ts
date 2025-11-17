@@ -158,12 +158,15 @@ export function createAuthenticationOptions(
     rpId,
     timeout: options?.timeout ?? 60000, // 1 minute
     userVerification: options?.userVerification ?? "required",
-    allowCredentials:
-      options?.allowCredentials?.map((cred) => ({
-        type: "public-key",
-        id: cred.id,
-        transports: ["internal"],
-      })) ?? [],
+    ...(options?.allowCredentials && options.allowCredentials.length > 0
+      ? {
+          allowCredentials: options.allowCredentials.map((cred) => ({
+            type: "public-key",
+            id: cred.id,
+            transports: ["internal"],
+          })),
+        }
+      : {}),
   };
 }
 
