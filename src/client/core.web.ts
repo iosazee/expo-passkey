@@ -220,6 +220,7 @@ export const expoPasskeyClient = (options: ExpoPasskeyClientOptions = {}) => {
               data.userName,
               data.displayName || data.userName,
               data.rpId ||
+                client.getOptions().rpId ||
                 (typeof window !== "undefined"
                   ? window.location.hostname
                   : "localhost"),
@@ -319,6 +320,7 @@ export const expoPasskeyClient = (options: ExpoPasskeyClientOptions = {}) => {
             const authenticationOptions = createWebAuthenticationOptions(
               challengeResult.data.challenge,
               data?.rpId ||
+                client.getOptions().rpId ||
                 (typeof window !== "undefined"
                   ? window.location.hostname
                   : "localhost"),
