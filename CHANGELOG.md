@@ -5,6 +5,62 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.7] - 2025-11-17
+
+### 🐛 Bug Fixes
+
+**Native Account Picker**: Fixed passkey authentication to show native account picker when multiple passkeys are available.
+
+- **FIXED**: `allowCredentials` field now omitted when empty instead of passing empty array
+- **IMPROVED**: Native platforms (Android/iOS) now display credential picker for all synced passkeys
+- **ENHANCED**: Cross-platform passkey discovery - passkeys registered on web are now discoverable on mobile and vice versa
+
+**Impact**:
+- Users can now select which Google account or Apple ID to authenticate with
+- Passkeys synced via Google Password Manager or iCloud Keychain are properly discoverable
+- Consistent behavior with OAuth account selection flows
+
+### ✨ Enhancements
+
+**Client Configuration**: Added `rpId` option to `ExpoPasskeyClientOptions` for better native app support.
+
+- **NEW**: `rpId` can now be configured in client initialization options
+- **IMPROVED**: Native authentication no longer defaults to empty string when rpId is not provided
+- **ENHANCED**: More reliable passkey authentication on native platforms
+- **NEW**: Fallback chain now checks client options before auto-detection
+
+**Configuration Example**:
+```typescript
+expoPasskeyClient({
+  rpId: "example.com",     // Configure once in client options
+  timeout: 60000,
+  storagePrefix: "myapp"
+})
+```
+
+**Benefits**:
+- Prevents authentication failures on native apps due to missing rpId
+- Simplifies API calls - no need to pass rpId to every function
+- Can still override per-operation if needed
+- Consistent configuration across web and native platforms
+
+### 🔧 Internal Improvements
+
+**Metadata Tracking**:
+- **NEW**: `createdOnThisDevice` field in `CredentialMetadata` to distinguish locally created vs synced passkeys
+- **IMPROVED**: Better tracking of credential origin for UI display and management
+
+**Testing**:
+- **NEW**: Comprehensive test suite for WebAuthn utility functions (8 test cases)
+- **IMPROVED**: Full coverage of `createAuthenticationOptions()` behavior
+- **VERIFIED**: All 185 tests passing across 21 test suites
+
+**Code Quality**:
+- **IMPROVED**: Applied consistent Prettier formatting to authenticate endpoint
+- **ENHANCED**: Updated README with complete API documentation and examples
+
+---
+
 ## [0.3.6] - 2025-10-23
 
 ### 🐛 Bug Fixes
