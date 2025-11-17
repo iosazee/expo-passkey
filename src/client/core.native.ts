@@ -246,13 +246,15 @@ export const expoPasskeyClient = (options: ExpoPasskeyClientOptions = {}) => {
               );
             }
 
-            if (!data.rpId) {
+            // Get rpId from data or client options
+            const rpId = data.rpId || client.getOptions().rpId;
+            if (!rpId) {
               console.error(
                 "[ExpoPasskey] Missing rpId parameter - this is required for passkey registration"
               );
               throw new PasskeyError(
                 ERROR_CODES.WEBAUTHN.INVALID_STATE,
-                "Missing required parameter: rpId must be provided for passkey registration"
+                "Missing required parameter: rpId must be provided either in registerPasskey() call or in client options"
               );
             }
 
@@ -272,7 +274,7 @@ export const expoPasskeyClient = (options: ExpoPasskeyClientOptions = {}) => {
               data.userId,
               data.userName,
               data.displayName || data.userName,
-              data.rpId,
+              rpId,
               data.rpName,
               {
                 timeout: data.timeout || client.getOptions().timeout,
@@ -325,6 +327,7 @@ export const expoPasskeyClient = (options: ExpoPasskeyClientOptions = {}) => {
                   rpId: registrationData.rpId,
                   deviceName: deviceInfo.model || undefined,
                   displayName: data.displayName || data.userName,
+                  createdOnThisDevice: true, // This credential was created on this device
                 };
 
                 // Store in secure storage
@@ -452,7 +455,7 @@ export const expoPasskeyClient = (options: ExpoPasskeyClientOptions = {}) => {
             // Create authentication options
             const authenticationOptions = createAuthenticationOptions(
               challenge,
-              data?.rpId || "",
+              data?.rpId || client.getOptions().rpId || "",
               {
                 timeout: data?.timeout || client.getOptions().timeout,
                 userVerification: data?.userVerification || "required",
@@ -501,9 +504,12 @@ export const expoPasskeyClient = (options: ExpoPasskeyClientOptions = {}) => {
                   );
                 } else if (authData.user?.id) {
                   // If this is a new credential, store it
+                  // Note: If we're authenticating with a credential we don't have locally,
+                  // it might be from another device, so mark as createdOnThisDevice=false
                   const credentialMetadata: Partial<CredentialMetadata> = {
                     displayName: authData.user.email || authData.user.id,
                     deviceName: deviceInfo.model || undefined,
+                    createdOnThisDevice: false, // We're just syncing this from server
                   };
 
                   await storeCredentialId(
@@ -627,6 +633,7 @@ export const expoPasskeyClient = (options: ExpoPasskeyClientOptions = {}) => {
                         displayName: metadata.displayName || data.userId,
                         lastUsedAt: passkey.lastUsed,
                         registeredAt: passkey.createdAt,
+                        createdOnThisDevice: false, // Synced from server, not created here
                       }
                     );
 
@@ -800,6 +807,7 @@ export const expoPasskeyClient = (options: ExpoPasskeyClientOptions = {}) => {
                     // Mark as cross-platform if not created on this platform
                     crossPlatform: passkey.platform !== deviceInfo.platform,
                     originalPlatform: passkey.platform,
+                    createdOnThisDevice: false, // Synced from server, not created here
                   }
                 );
               }
