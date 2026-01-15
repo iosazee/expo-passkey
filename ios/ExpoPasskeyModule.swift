@@ -349,23 +349,49 @@ public class ExpoPasskeyModule: Module, PasskeyResultHandler {
     guard let delegate = passkeyDelegate else {
       return
     }
-    
+
     // Reset the delegate to allow future operations
     passkeyDelegate = nil
-    
+
+    // Log detailed error information for debugging
+    print("[ExpoPasskey] Authentication failed with error: \(error)")
+    print("[ExpoPasskey] Error domain: \(error._domain)")
+    print("[ExpoPasskey] Error code: \(error._code)")
+    print("[ExpoPasskey] Error description: \(error.localizedDescription)")
+
     // Convert the error to an appropriate exception
     if let asError = error as? ASAuthorizationError {
+      print("[ExpoPasskey] ASAuthorizationError code: \(asError.code.rawValue)")
+
       switch asError.code {
       case .canceled:
         delegate.promise?.reject(UserCancelledException())
       case .failed:
+        // Log additional context for failed requests
+        print("[ExpoPasskey] ASAuthorizationError.failed - Common causes:")
+        print("[ExpoPasskey]   1. Associated Domains not configured in app.json")
+        print("[ExpoPasskey]   2. Apple App Site Association file not accessible or misconfigured")
+        print("[ExpoPasskey]   3. Domain mismatch between app and server rpId")
+        print("[ExpoPasskey]   4. Bundle ID mismatch in AASA file")
+        print("[ExpoPasskey] Underlying error: \(asError.localizedDescription)")
+        if let underlyingError = asError.errorUserInfo[NSUnderlyingErrorKey] as? NSError {
+          print("[ExpoPasskey] Underlying error details: \(underlyingError)")
+        }
         delegate.promise?.reject(PasskeyRequestFailedException())
       case .invalidResponse:
         delegate.promise?.reject(PasskeyAuthorizationFailedException())
-      default:
+      case .notHandled:
+        print("[ExpoPasskey] ASAuthorizationError.notHandled - Request was not handled")
+        delegate.promise?.reject(UnknownException())
+      case .unknown:
+        print("[ExpoPasskey] ASAuthorizationError.unknown")
+        delegate.promise?.reject(UnknownException())
+      @unknown default:
+        print("[ExpoPasskey] Unknown ASAuthorizationError code: \(asError.code.rawValue)")
         delegate.promise?.reject(UnknownException())
       }
     } else {
+      print("[ExpoPasskey] Non-ASAuthorizationError: \(type(of: error))")
       delegate.promise?.reject(UnknownException())
     }
   }

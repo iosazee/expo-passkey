@@ -32,3 +32,9 @@ export type {
   UserVerificationRequirement,
   PublicKeyCredentialDescriptor,
 } from "./types/webauthn";
+
+// Export diagnostic utilities
+export {
+  runPasskeyDiagnostics,
+  isPasskeyReady,
+} from "./client/utils/diagnostics.native";

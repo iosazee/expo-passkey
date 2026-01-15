@@ -746,6 +746,25 @@ Optimizing database performance is essential to get the best out of the Expo Pas
 
 ## Troubleshooting
 
+### Diagnostic Utilities
+
+The package includes built-in diagnostic tools to help identify configuration issues:
+
+```typescript
+import { runPasskeyDiagnostics, isPasskeyReady } from 'expo-passkey/native';
+
+// Run comprehensive diagnostics (logs detailed information)
+await runPasskeyDiagnostics();
+
+// Quick check if passkey is ready
+const { ready, issues } = await isPasskeyReady();
+if (!ready) {
+  console.log('Passkey not ready:', issues);
+}
+```
+
+**For detailed iOS debugging, see [DEBUG_PASSKEY_IOS.md](./DEBUG_PASSKEY_IOS.md)**
+
 ### Web Issues
 
 - **HTTPS Required**: WebAuthn only works over HTTPS in production
@@ -762,6 +781,7 @@ Optimizing database performance is essential to get the best out of the Expo Pas
 - **Simulator Limitations**: Biometric authentication in simulators requires additional setup:
   - In the simulator, go to Features → Face ID/Touch ID → Enrolled
   - When prompted, select "Matching Face/Fingerprint" for success testing
+- **Enhanced Error Logging**: Check Xcode console for detailed error messages with `[ExpoPasskey]` prefix
 
 ### Android Issues
 

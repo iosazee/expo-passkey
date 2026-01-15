@@ -45,7 +45,14 @@ internal class InvalidUserIdException: Exception {
 
 internal class PasskeyRequestFailedException: Exception {
   override var reason: String {
-    "The passkey request failed"
+    """
+    The passkey request failed. This usually indicates a configuration issue:
+    1. Check Associated Domains in app.json (webcredentials:yourdomain.com)
+    2. Verify Apple App Site Association file is accessible at https://yourdomain.com/.well-known/apple-app-site-association
+    3. Ensure rpId in server config matches your domain
+    4. Verify Bundle ID in AASA file matches your app
+    Check Xcode console logs for detailed error information.
+    """
   }
 }
 
