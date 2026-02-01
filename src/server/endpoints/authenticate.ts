@@ -224,6 +224,19 @@ export const createAuthenticateEndpoint = (options: {
 
           const now = new Date().toISOString();
 
+          // Parse existing metadata safely to prevent crashes from corrupted data
+          let existingMetadata: Record<string, unknown> = {};
+          if (passkey.metadata) {
+            try {
+              existingMetadata = JSON.parse(passkey.metadata);
+            } catch (parseError) {
+              logger.warn(
+                "Failed to parse existing passkey metadata, resetting:",
+                { credentialId, error: parseError }
+              );
+            }
+          }
+
           // Update passkey metadata and counter
           await ctx.context.adapter.update({
             model: schemaConfig.authPasskeyModel,
@@ -234,7 +247,7 @@ export const createAuthenticateEndpoint = (options: {
               // Update counter from authentication response
               counter: verification.authenticationInfo.newCounter,
               metadata: JSON.stringify({
-                ...JSON.parse(passkey.metadata || "{}"),
+                ...existingMetadata,
                 ...metadata,
                 lastAuthenticationAt: now,
               }),

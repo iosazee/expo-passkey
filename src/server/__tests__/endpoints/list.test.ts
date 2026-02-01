@@ -257,6 +257,99 @@ describe("listPasskeys endpoint", () => {
     });
   });
 
+  it("should handle corrupted metadata gracefully", async () => {
+    const corruptedPasskeys = [
+      {
+        id: "passkey-1",
+        userId: "user-123",
+        credentialId: "credential-1",
+        platform: "ios",
+        status: "active",
+        lastUsed: "2023-02-01T00:00:00Z",
+        createdAt: "2023-01-01T00:00:00Z",
+        updatedAt: "2023-02-01T00:00:00Z",
+        metadata: "not-valid-json",
+      },
+      {
+        id: "passkey-2",
+        userId: "user-123",
+        credentialId: "credential-2",
+        platform: "android",
+        status: "active",
+        lastUsed: "2023-01-15T00:00:00Z",
+        createdAt: "2023-01-10T00:00:00Z",
+        updatedAt: "2023-01-15T00:00:00Z",
+        metadata: '{"deviceName":"Pixel 7"}',
+      },
+    ];
+
+    mockCtx.context.adapter.findMany.mockResolvedValueOnce(corruptedPasskeys);
+
+    const endpoint = createListEndpoint(options);
+    const handler = (endpoint as any).handler as EndpointHandler;
+
+    await handler(mockCtx as any);
+
+    const responseArg = mockCtx.json.mock.calls[0][0];
+
+    // Corrupted metadata should fall back to empty object
+    expect(responseArg.passkeys[0].metadata).toEqual({});
+
+    // Valid metadata should still be parsed correctly
+    expect(responseArg.passkeys[1].metadata).toEqual({ deviceName: "Pixel 7" });
+
+    // Warning should be logged for the corrupted passkey
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      "Failed to parse passkey metadata:",
+      expect.objectContaining({ passkeyId: "passkey-1" }),
+    );
+  });
+
+  it("should handle null and undefined metadata gracefully", async () => {
+    const passkeysWithNullMetadata = [
+      {
+        id: "passkey-1",
+        userId: "user-123",
+        credentialId: "credential-1",
+        platform: "ios",
+        status: "active",
+        lastUsed: "2023-02-01T00:00:00Z",
+        createdAt: "2023-01-01T00:00:00Z",
+        updatedAt: "2023-02-01T00:00:00Z",
+        metadata: null,
+      },
+      {
+        id: "passkey-2",
+        userId: "user-123",
+        credentialId: "credential-2",
+        platform: "android",
+        status: "active",
+        lastUsed: "2023-01-15T00:00:00Z",
+        createdAt: "2023-01-10T00:00:00Z",
+        updatedAt: "2023-01-15T00:00:00Z",
+        metadata: undefined,
+      },
+    ];
+
+    mockCtx.context.adapter.findMany.mockResolvedValueOnce(
+      passkeysWithNullMetadata,
+    );
+
+    const endpoint = createListEndpoint(options);
+    const handler = (endpoint as any).handler as EndpointHandler;
+
+    await handler(mockCtx as any);
+
+    const responseArg = mockCtx.json.mock.calls[0][0];
+
+    // Both should default to empty object without logging warnings
+    expect(responseArg.passkeys[0].metadata).toEqual({});
+    expect(responseArg.passkeys[1].metadata).toEqual({});
+
+    // No warnings should be logged for null/undefined metadata
+    expect(mockLogger.warn).not.toHaveBeenCalled();
+  });
+
   it("should handle database errors gracefully", async () => {
     // Mock database error
     mockCtx.context.adapter.findMany.mockRejectedValueOnce(

@@ -158,22 +158,34 @@ export const createListEndpoint = (options: {
         const results = hasMore ? passkeys.slice(0, limit) : passkeys;
 
         // Format passkeys for response
-        const formattedPasskeys = results.map((passkey) => ({
-          id: passkey.id,
-          userId: passkey.userId,
-          credentialId: passkey.credentialId,
-          platform: passkey.platform,
-          lastUsed: passkey.lastUsed,
-          status: passkey.status,
-          aaguid: passkey.aaguid || null,
-          createdAt: passkey.createdAt,
-          updatedAt: passkey.updatedAt,
-          revokedAt: passkey.revokedAt,
-          revokedReason: passkey.revokedReason,
-          metadata: passkey.metadata
-            ? JSON.parse(passkey.metadata as string)
-            : {},
-        }));
+        const formattedPasskeys = results.map((passkey) => {
+          let parsedMetadata: Record<string, unknown> = {};
+          if (passkey.metadata) {
+            try {
+              parsedMetadata = JSON.parse(passkey.metadata as string);
+            } catch (parseError) {
+              logger.warn("Failed to parse passkey metadata:", {
+                passkeyId: passkey.id,
+                error: parseError,
+              });
+            }
+          }
+
+          return {
+            id: passkey.id,
+            userId: passkey.userId,
+            credentialId: passkey.credentialId,
+            platform: passkey.platform,
+            lastUsed: passkey.lastUsed,
+            status: passkey.status,
+            aaguid: passkey.aaguid || null,
+            createdAt: passkey.createdAt,
+            updatedAt: passkey.updatedAt,
+            revokedAt: passkey.revokedAt,
+            revokedReason: passkey.revokedReason,
+            metadata: parsedMetadata,
+          };
+        });
 
         logger.debug("Returning passkeys:", {
           count: formattedPasskeys.length,
