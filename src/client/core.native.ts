@@ -59,6 +59,7 @@ import {
 class ExpoPasskeyClient {
   private options: ExpoPasskeyClientOptions;
   private webAuthnSupport: ReturnType<typeof checkWebAuthnSupport>;
+  private _cachedIsSupported: boolean | null = null;
 
   constructor(options: ExpoPasskeyClientOptions = {}) {
     // Set defaults for options
@@ -87,19 +88,27 @@ class ExpoPasskeyClient {
   }
 
   /**
-   * Check if WebAuthn is supported on this device
+   * Check if WebAuthn is supported on this device.
+   * Result is cached after the first call since device capabilities
+   * don't change during a session.
    */
   public async isWebAuthnSupported() {
+    if (this._cachedIsSupported !== null) {
+      return this._cachedIsSupported;
+    }
+
     try {
       // First check platform requirements
       if (!this.webAuthnSupport.isSupported) {
+        this._cachedIsSupported = false;
         return false;
       }
 
       // Then check native module availability
-      return await isNativePasskeySupported();
+      this._cachedIsSupported = await isNativePasskeySupported();
+      return this._cachedIsSupported;
     } catch (_error) {
-      // Prefix with _ to indicate intentional unused variable
+      this._cachedIsSupported = false;
       return false;
     }
   }
