@@ -5,7 +5,7 @@
 
 import type { BiometricSupportInfo } from "../../types";
 import { isSupportedPlatform } from "./environment";
-import ExpoPasskeyModule from "../../ExpoPasskeyModule";
+import { isNativePasskeySupported } from "../native-module";
 
 import { loadExpoModules } from "./modules";
 
@@ -74,7 +74,7 @@ export async function checkBiometricSupport(): Promise<BiometricSupportInfo> {
     let nativePasskeySupported = false;
     try {
       // Use the ExpoPasskeyModule directly
-      nativePasskeySupported = ExpoPasskeyModule.isPasskeySupported();
+      nativePasskeySupported = isNativePasskeySupported();
     } catch (error) {
       console.warn(
         "[ExpoPasskey] Error checking native passkey support:",
@@ -208,7 +208,7 @@ export async function isPasskeySupported(): Promise<boolean> {
     // Final check: native WebAuthn module
     try {
       // Use the new ExpoPasskeyModule directly
-      const nativeSupported = ExpoPasskeyModule.isPasskeySupported();
+      const nativeSupported = isNativePasskeySupported();
       return nativeSupported;
     } catch (error) {
       console.error("[ExpoPasskey] Error checking native module:", error);

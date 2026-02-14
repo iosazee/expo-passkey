@@ -110,7 +110,7 @@ jest.mock("../utils/device", () => {
 
 // Mock native module
 jest.mock("../native-module", () => ({
-  isNativePasskeySupported: jest.fn().mockResolvedValue(true),
+  isNativePasskeySupported: jest.fn().mockReturnValue(true),
   createNativePasskey: jest.fn(),
   authenticateWithNativePasskey: jest.fn(),
 }));

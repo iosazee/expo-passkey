@@ -14,30 +14,30 @@ import type {
 import ExpoPasskeyModule from "../ExpoPasskeyModule";
 
 /**
- * Check if passkeys are supported on this device via the native module
- * Enhanced with better error handling and debug logging
+ * Module-level cache for native passkey support check.
+ * Device capabilities don't change during a session, so we only
+ * need to call the native module once.
  */
-export async function isNativePasskeySupported(): Promise<boolean> {
-  try {
-    // Call the native method and log the result
-    const result = ExpoPasskeyModule.isPasskeySupported();
-    // console.debug(
-    //   `[ExpoPasskey] Native module isPasskeySupported() returned: ${result}`,
-    // );
+let cachedIsSupported: boolean | null = null;
 
-    return result;
+/**
+ * Check if passkeys are supported on this device via the native module.
+ * Result is cached after the first call to avoid redundant native bridge calls.
+ */
+export function isNativePasskeySupported(): boolean {
+  if (cachedIsSupported !== null) {
+    return cachedIsSupported;
+  }
+
+  try {
+    cachedIsSupported = ExpoPasskeyModule.isPasskeySupported();
+    return cachedIsSupported;
   } catch (error) {
     console.error(
       "[ExpoPasskey] Error checking native passkey support:",
       error,
     );
-
-    // Log additional information for debugging
-    if (error instanceof Error) {
-      console.error("[ExpoPasskey] Error message:", error.message);
-      console.error("[ExpoPasskey] Error stack:", error.stack);
-    }
-
+    cachedIsSupported = false;
     return false;
   }
 }

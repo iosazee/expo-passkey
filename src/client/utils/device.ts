@@ -13,7 +13,7 @@ import {
   getCredentialMetadata,
   getUserCredentialIds,
 } from "./storage";
-import ExpoPasskeyModule from "../../ExpoPasskeyModule";
+import { isNativePasskeySupported } from "../native-module";
 
 // Helper function to get modules only when needed
 function getModules() {
@@ -234,7 +234,7 @@ export async function isDevicePasskeyCapable(): Promise<boolean> {
   try {
     // Check if the native WebAuthn module is available and supported
     // Use the new ExpoPasskeyModule directly
-    const nativeSupported = ExpoPasskeyModule.isPasskeySupported();
+    const nativeSupported = isNativePasskeySupported();
 
     if (!nativeSupported) {
       return false;
