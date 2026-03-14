@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.12] - 2026-03-14
+
+### 🔒 Security
+
+**Session-Scoped Passkey Validation**: Prevent session-switching when a device has passkeys registered for multiple user accounts.
+
+- **FIXED**: Authenticate endpoint now checks if the caller has an existing session and rejects passkeys belonging to a different user with `FORBIDDEN`/`USER_MISMATCH`
+- **NEW**: `USER_MISMATCH` error code added to `ERROR_CODES.SERVER` and `ERROR_MESSAGES`
+- **IMPROVED**: Injectable `_sessionFetcher` parameter for testability (same pattern as challenge endpoint)
+
+**Impact**:
+- On multi-account devices, authenticating with another user's passkey no longer silently switches the session
+- Fresh login flows (no existing session) are unaffected
+- Client-side `allowCredentials` filtering via `userId` parameter remains the primary defense; this is defense-in-depth
+
+### 🧪 Testing
+
+- **NEW**: 3 test cases for session-scoped validation: user mismatch (rejected), same user (allowed), no session (allowed)
+- **VERIFIED**: All 193 tests passing across 21 test suites
+
+---
+
 ## [0.3.11] - 2026-02-13
 ### Performance
 - **Perf** move native passkey support cache to module level in `native-module.ts` — single source of truth

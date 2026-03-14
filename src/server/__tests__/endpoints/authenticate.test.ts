@@ -4,6 +4,9 @@ import { APIError } from "better-call";
 import { createAuthenticateEndpoint } from "../../../server/endpoints/authenticate";
 import type { ResolvedSchemaConfig } from "../../../types/server";
 
+// Mock session fetcher for testing session-scoped passkey validation
+const mockSessionFetcher = jest.fn().mockResolvedValue(null);
+
 // Mock dependencies
 jest.mock("better-auth/cookies", () => ({
   setSessionCookie: jest.fn(),
@@ -43,6 +46,7 @@ describe("authenticatePasskey endpoint", () => {
     rpId: "example.com", // Add required rpId property
     origin: ["https://example.com", "example://"], // Add required origin property
     schemaConfig: defaultSchemaConfig, // Add required schemaConfig
+    _sessionFetcher: mockSessionFetcher, // Inject mock session fetcher
   };
 
   // Mock request context
@@ -275,6 +279,126 @@ describe("authenticatePasskey endpoint", () => {
           lastLocation: "mobile-app",
           appVersion: "1.0.0",
           lastAuthenticationAt: expect.any(String),
+        }),
+      );
+    });
+  });
+
+  describe("session-scoped passkey validation", () => {
+    const mockPasskey = {
+      id: "passkey-id",
+      userId: "user-123",
+      credentialId: "test-credential-id",
+      publicKey: "base64-encoded-key",
+      counter: 0,
+      status: "active",
+      metadata: '{"deviceName":"iPhone 14"}',
+    };
+
+    const mockUser = {
+      id: "user-123",
+      email: "test@example.com",
+      emailVerified: true,
+    };
+
+    const mockChallenge = {
+      id: "challenge-id",
+      userId: "user-123",
+      challenge: "test-challenge",
+      type: "authentication",
+      createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 300000).toISOString(),
+    };
+
+    function setupFullFlowMocks() {
+      mockCtx.context.adapter.findOne
+        .mockResolvedValueOnce(mockPasskey)
+        .mockResolvedValueOnce(mockUser);
+
+      mockCtx.context.adapter.findMany
+        .mockResolvedValueOnce([mockChallenge])
+        .mockResolvedValueOnce([]);
+
+      (verifyAuthenticationResponse as jest.Mock).mockResolvedValueOnce({
+        verified: true,
+        authenticationInfo: { newCounter: 1 },
+      });
+
+      mockCtx.context.adapter.update.mockResolvedValueOnce({});
+      mockCtx.context.adapter.delete.mockResolvedValueOnce({});
+    }
+
+    it("should reject authentication when passkey belongs to a different user than current session", async () => {
+      // Simulate existing session for a DIFFERENT user
+      mockSessionFetcher.mockResolvedValueOnce({
+        user: { id: "different-user-456" },
+      });
+
+      // Only need findOne to return the passkey (rejection happens before verification)
+      mockCtx.context.adapter.findOne.mockResolvedValueOnce(mockPasskey);
+
+      const endpoint = createAuthenticateEndpoint(options);
+      const handler = (endpoint as any).handler as EndpointHandler;
+
+      await expect(handler(mockCtx as any)).rejects.toThrow(APIError);
+
+      // Verify it was rejected with USER_MISMATCH
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        "Authentication rejected: passkey belongs to different user than current session",
+        expect.objectContaining({
+          credentialId: "test-credential-id",
+          sessionUserId: "different-user-456",
+          passkeyUserId: "user-123",
+        }),
+      );
+
+      // Verify WebAuthn verification was never called (fail fast)
+      expect(verifyAuthenticationResponse).not.toHaveBeenCalled();
+    });
+
+    it("should allow authentication when passkey belongs to the same user as current session", async () => {
+      // Simulate existing session for the SAME user
+      mockSessionFetcher.mockResolvedValueOnce({
+        user: { id: "user-123" },
+      });
+
+      setupFullFlowMocks();
+
+      const endpoint = createAuthenticateEndpoint(options);
+      const handler = (endpoint as any).handler as EndpointHandler;
+
+      await handler(mockCtx as any);
+
+      // Should succeed - no USER_MISMATCH warning
+      expect(mockLogger.warn).not.toHaveBeenCalledWith(
+        "Authentication rejected: passkey belongs to different user than current session",
+        expect.anything(),
+      );
+
+      expect(mockCtx.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          token: "test-session-token",
+          user: expect.objectContaining({ id: "user-123" }),
+        }),
+      );
+    });
+
+    it("should allow authentication when no existing session (fresh login)", async () => {
+      // No session — default mockSessionFetcher returns null
+      mockSessionFetcher.mockResolvedValueOnce(null);
+
+      setupFullFlowMocks();
+
+      const endpoint = createAuthenticateEndpoint(options);
+      const handler = (endpoint as any).handler as EndpointHandler;
+
+      await handler(mockCtx as any);
+
+      // Should succeed normally
+      expect(mockCtx.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          token: "test-session-token",
+          user: expect.objectContaining({ id: "user-123" }),
         }),
       );
     });

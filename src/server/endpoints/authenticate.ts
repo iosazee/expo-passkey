@@ -9,7 +9,7 @@ import {
   type AuthenticationResponseJSON,
 } from "@simplewebauthn/server";
 import { isoBase64URL } from "@simplewebauthn/server/helpers";
-import { createAuthEndpoint } from "better-auth/api";
+import { createAuthEndpoint, getSessionFromCtx } from "better-auth/api";
 import { setCookieCache, setSessionCookie } from "better-auth/cookies";
 import type { User } from "better-auth/types";
 import { APIError } from "better-call";
@@ -32,8 +32,16 @@ export const createAuthenticateEndpoint = (options: {
   rpId: string;
   origin?: string | string[];
   schemaConfig: ResolvedSchemaConfig;
+  /** @internal For testing only */
+  _sessionFetcher?: typeof getSessionFromCtx;
 }) => {
-  const { logger, rpId, origin, schemaConfig } = options;
+  const {
+    logger,
+    rpId,
+    origin,
+    schemaConfig,
+    _sessionFetcher = getSessionFromCtx,
+  } = options;
 
   // Convert to array of origins for consistency, or use empty array if undefined
   const expectedOrigins = origin
@@ -119,6 +127,30 @@ export const createAuthenticateEndpoint = (options: {
           throw new APIError("UNAUTHORIZED", {
             code: ERROR_CODES.SERVER.INVALID_CREDENTIAL,
             message: ERROR_MESSAGES[ERROR_CODES.SERVER.INVALID_CREDENTIAL],
+          });
+        }
+
+        // Defense-in-depth: If the caller already has an active session,
+        // verify the passkey belongs to the same user. This prevents
+        // session-switching when a device has passkeys for multiple accounts.
+        // Note: getSessionFromCtx returns null (never throws) when no session exists,
+        // so a null result simply means this is a fresh login — proceed normally.
+        const existingSession = await _sessionFetcher(ctx);
+        if (
+          existingSession?.user?.id &&
+          existingSession.user.id !== passkey.userId
+        ) {
+          logger.warn(
+            "Authentication rejected: passkey belongs to different user than current session",
+            {
+              credentialId,
+              sessionUserId: existingSession.user.id,
+              passkeyUserId: passkey.userId,
+            }
+          );
+          throw new APIError("FORBIDDEN", {
+            code: ERROR_CODES.SERVER.USER_MISMATCH,
+            message: ERROR_MESSAGES[ERROR_CODES.SERVER.USER_MISMATCH],
           });
         }
 

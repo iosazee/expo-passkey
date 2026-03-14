@@ -52,6 +52,7 @@ export const ERROR_CODES = {
     INVALID_CHALLENGE: "invalid_challenge",
     EXPIRED_CHALLENGE: "expired_challenge",
     VERIFICATION_FAILED: "verification_failed",
+    USER_MISMATCH: "user_mismatch",
   },
 } as const;
 
@@ -98,6 +99,8 @@ export const ERROR_MESSAGES = {
   [ERROR_CODES.SERVER.INVALID_CHALLENGE]: "Invalid challenge",
   [ERROR_CODES.SERVER.EXPIRED_CHALLENGE]: "Challenge has expired",
   [ERROR_CODES.SERVER.VERIFICATION_FAILED]: "WebAuthn verification failed",
+  [ERROR_CODES.SERVER.USER_MISMATCH]:
+    "This passkey belongs to a different account. Please use a passkey registered to your current account.",
 } as const;
 
 /**
