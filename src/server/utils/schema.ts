@@ -43,6 +43,11 @@ export const challengeSchema = z.object({
  * Schema for WebAuthn passkey registration requests
  * Note: userId is obtained from the authenticated session for security.
  * Client should not provide userId.
+ *
+ * `livenessToken` is an optional pass-through field consumed by the
+ * `expo-passkey-liveness` sibling package's enforcement hook (when
+ * installed). When that package is not in use, the field is ignored
+ * by this plugin's register handler — no behaviour change.
  */
 export const registerPasskeySchema = z.object({
   credential: z.object({
@@ -70,10 +75,16 @@ export const registerPasskeySchema = z.object({
       lastLocation: z.string().optional(),
     })
     .optional(),
+  livenessToken: z.string().optional(),
 });
 
 /**
  * Schema for WebAuthn passkey authentication requests
+ *
+ * `livenessToken` is an optional pass-through field consumed by the
+ * `expo-passkey-liveness` sibling package's enforcement hook (when
+ * installed). When that package is not in use, the field is ignored
+ * by this plugin's authenticate handler — no behaviour change.
  */
 export const authenticatePasskeySchema = z.object({
   credential: z.object({
@@ -97,6 +108,7 @@ export const authenticatePasskeySchema = z.object({
       biometricType: z.string().optional(),
     })
     .optional(),
+  livenessToken: z.string().optional(),
 });
 
 /**
