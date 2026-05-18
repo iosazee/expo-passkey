@@ -3,9 +3,18 @@
  * @description Handles cleanup of inactive passkeys
  */
 
-import type { AuthContext } from "better-auth/types";
 import type { ResolvedSchemaConfig } from "../../types";
 import type { Logger } from "./logger";
+
+/**
+ * Minimal structural type for the Better Auth context. The real
+ * `AuthContext` type moved between better-auth 1.3 (re-exported from
+ * `better-auth/types`) and 1.6+ (exported only from `@better-auth/core`).
+ * We only touch `adapter`, so structural-typing avoids pinning the
+ * peer-dep range to either side of that change.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AuthCtxLike = { adapter: any };
 
 export interface CleanupOptions {
   /**
@@ -25,7 +34,7 @@ export interface CleanupOptions {
  * Initializes the cleanup job for inactive passkeys
  */
 export const setupCleanupJob = (
-  ctx: AuthContext,
+  ctx: AuthCtxLike,
   options: CleanupOptions = {},
   logger: Logger,
   schemaConfig: ResolvedSchemaConfig,

@@ -292,11 +292,15 @@ export const createAuthenticateEndpoint = (options: {
             where: [{ field: "id", operator: "eq", value: storedChallenge.id }],
           });
 
-          // Create session token using internal adapter
-          // We pass false to prevent automatic cookie setting
+          // Create session token using internal adapter.
+          //
+          // The 1.6+ signature is `createSession(userId, dontRememberMe,
+          // override?, overrideAll?)`. Older better-auth versions
+          // (≤1.5) accepted `(userId, ctx, dontRememberMe)`. We use the
+          // current signature; the runtime "don't remember me" flag is
+          // false (= remember).
           const sessionToken = await ctx.context.internalAdapter.createSession(
             user.id,
-            ctx,
             false
           );
 
@@ -331,9 +335,12 @@ export const createAuthenticateEndpoint = (options: {
           // Set the session cookie with our manually constructed data
           await setSessionCookie(ctx, sessionData);
 
-          // Set session data cache if enabled in configuration
+          // Set session data cache if enabled in configuration.
+          //
+          // 1.6+ requires an explicit dontRememberMe flag here (false
+          // = remember the session). Older versions accepted two args.
           if (sessionConfig.cookieCache?.enabled) {
-            await setCookieCache(ctx, sessionData);
+            await setCookieCache(ctx, sessionData, false);
           }
 
           logger.info("WebAuthn authentication successful", {

@@ -4,11 +4,23 @@
  */
 
 import { createAuthEndpoint, getSessionFromCtx } from "better-auth/api";
-import type { AuthContext, BetterAuthPlugin } from "better-auth/types";
+import type { BetterAuthPlugin } from "better-auth/types";
 import { APIError } from "better-call";
 
 import { ERROR_CODES, ERROR_MESSAGES } from "../types/errors";
 import type { ExpoPasskeyOptions, ResolvedSchemaConfig } from "../types/server";
+
+/**
+ * Minimal structural type for the Better Auth context.
+ *
+ * `AuthContext` moved between better-auth 1.3 (exported from
+ * `better-auth/types`) and 1.6+ (exported only from
+ * `@better-auth/core`). Importing from either path pins the plugin
+ * to one version. We only touch `adapter` here, so a structural
+ * type keeps the plugin compatible across the peer-dep range.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AuthCtxLike = { adapter: any };
 
 import {
   createAuthenticateEndpoint,
@@ -196,7 +208,7 @@ export const expoPasskey = (options: ExpoPasskeyOptions): BetterAuthPlugin => {
     },
 
     // Plugin initialization
-    init: (ctx: AuthContext) => {
+    init: (ctx: AuthCtxLike) => {
       if (process.env.NODE_ENV !== "production") {
         logger.info(
           "Initializing Expo Passkey plugin with WebAuthn support...",
@@ -328,7 +340,24 @@ export const expoPasskey = (options: ExpoPasskeyOptions): BetterAuthPlugin => {
     // Rate limiting configuration
     rateLimit: rateLimits,
 
-    // Error codes exposed for client use
-    $ERROR_CODES: ERROR_CODES.SERVER,
+    // Error codes exposed for client use.
+    //
+    // Better Auth 1.6+ tightened this slot to `Record<string, RawError>`
+    // where each value is `{ readonly code, message }`. We wrap our
+    // existing flat string-keyed map at the assignment site without
+    // touching the public `ERROR_CODES` export — consumers can keep
+    // reading `ERROR_CODES.SERVER.X` as a string. Cast-through-unknown
+    // keeps the build green on the older 1.3.x type that expected
+    // `Record<string, string>` too.
+    $ERROR_CODES: buildRawErrorCodes(),
   };
 };
+
+function buildRawErrorCodes(): Record<string, { code: string; message: string }> {
+  return Object.fromEntries(
+    Object.entries(ERROR_CODES.SERVER).map(([key, code]) => [
+      key,
+      { code, message: ERROR_MESSAGES[code] ?? code },
+    ]),
+  );
+}

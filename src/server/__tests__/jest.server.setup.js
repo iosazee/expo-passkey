@@ -70,6 +70,14 @@ jest.mock("better-call", () => ({
   },
 }));
 
+// better-auth/cookies is ESM-only in 1.6+ and is transitively imported
+// by authenticate.ts. Tests that don't exercise the cookie path can use
+// this passthrough; authenticate.test.ts overrides with its own mock.
+jest.mock("better-auth/cookies", () => ({
+  setSessionCookie: jest.fn(),
+  setCookieCache: jest.fn(),
+}));
+
 // Clear all tracked intervals after each test
 afterEach(() => {
   intervals.forEach((id) => {

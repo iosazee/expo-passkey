@@ -1,4 +1,11 @@
-import type { AuthContext, BetterAuthPlugin } from "better-auth/types";
+import type { BetterAuthPlugin } from "better-auth/types";
+
+// `AuthContext` moved between better-auth 1.3 and 1.6+. We only use
+// it for `as unknown as` casts; widening to `any` keeps the test
+// portable across versions without depending on the transitive
+// `@better-auth/core` package path.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AuthContext = any;
 import { ERROR_CODES, type AuthPasskey } from "../../types";
 import { expoPasskey } from "../core";
 import { createLogger, createRateLimits, setupCleanupJob } from "../utils";
@@ -139,7 +146,19 @@ describe("expoPasskey server plugin", () => {
     expect(plugin.endpoints.authenticatePasskey).toBeDefined();
     expect(plugin.endpoints.listPasskeys).toBeDefined();
     expect(plugin.endpoints.revokePasskey).toBeDefined();
-    expect(plugin.$ERROR_CODES).toBe(ERROR_CODES.SERVER);
+    // $ERROR_CODES is now wrapped into the RawError shape required by
+    // better-auth 1.6+: { code, message } per key. The underlying
+    // ERROR_CODES.SERVER export is unchanged.
+    expect(plugin.$ERROR_CODES).toMatchObject({
+      CREDENTIAL_EXISTS: {
+        code: ERROR_CODES.SERVER.CREDENTIAL_EXISTS,
+        message: expect.any(String),
+      },
+      INVALID_ORIGIN: {
+        code: ERROR_CODES.SERVER.INVALID_ORIGIN,
+        message: expect.any(String),
+      },
+    });
   });
 
   it("should create a plugin with custom schema model names", () => {
