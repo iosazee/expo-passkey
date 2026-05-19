@@ -9,12 +9,18 @@ import crypto from "crypto";
 import type { ResolvedSchemaConfig } from "../../types";
 import type { Logger } from "../utils/logger";
 import { challengeSchema } from "../utils/schema";
+import { resolveSession } from "../utils/session";
 
 /**
- * Session fetcher that can be overridden in tests
+ * Session fetcher that can be overridden in tests.
+ *
+ * Defaults to {@link resolveSession}, which is resilient to better-auth
+ * 1.6's `runWithRequestState` propagation issues — see
+ * `src/server/utils/session.ts` for the long-form rationale.
+ *
  * @internal
  */
-export const _getSession = getSessionFromCtx;
+export const _getSession = resolveSession;
 
 /**
  * Creates a WebAuthn challenge endpoint for registration and authentication
@@ -23,7 +29,7 @@ export const createChallengeEndpoint = (options: {
   logger: Logger;
   schemaConfig: ResolvedSchemaConfig;
   /** @internal For testing only */
-  _sessionFetcher?: typeof getSessionFromCtx;
+  _sessionFetcher?: typeof getSessionFromCtx | typeof resolveSession;
 }) => {
   const { logger, schemaConfig, _sessionFetcher = _getSession } = options;
 
@@ -79,13 +85,15 @@ export const createChallengeEndpoint = (options: {
       let userId: string;
 
       try {
-        // Manually fetch session without requiring it (returns null if no session)
+        // resolveSession never throws (it swallows internally) but we
+        // keep the defensive try/catch so an injected test fetcher with
+        // older throw-on-invalid semantics still degrades gracefully.
         let session;
         try {
           session = await _sessionFetcher(ctx);
         } catch (sessionError) {
-          // getSessionFromCtx may throw an error if session is invalid
-          // For authentication challenges, this is acceptable (user not logged in yet)
+          // For authentication challenges, this is acceptable (user not
+          // logged in yet); for registration we'll throw UNAUTHORIZED below.
           logger.debug("Session fetch failed (acceptable for auth challenges)", {
             type,
             error: sessionError instanceof Error ? sessionError.message : String(sessionError),

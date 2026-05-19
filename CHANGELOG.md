@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.13] - 2026-05-19
+
+### 🐛 Fixes
+
+**Compatibility with better-auth 1.6+**: Plugin endpoints no longer return spurious `UNAUTHORIZED` ("You must be logged in to register a passkey") for users with valid sessions.
+
+- **ROOT CAUSE**: better-auth 1.6 introduced an `AsyncLocalStorage`-based request-state context (`runWithRequestState`). The internal `getSession` handler's cookie-cache fast path calls `getShouldSkipSessionRefresh()`, which throws "No request state found" when the propagation breaks (e.g. multiple `@better-auth/core` copies, certain serverless runtimes, hooks spawning work outside the parent's async context). The error is swallowed by `getSessionFromCtx`'s `.catch(() => null)` and surfaces as "no session".
+- **FIXED**: New `resolveSession(ctx)` helper tries the standard `getSessionFromCtx` first and, on failure or null-with-cookie, falls back to a direct `internalAdapter.findSession` lookup that bypasses the request-state machinery entirely.
+- **FIXED**: New `passkeySessionMiddleware` (drop-in for `sessionMiddleware`) uses `resolveSession` under the hood. Applied on `/expo-passkey/register`, `/expo-passkey/revoke`, `/expo-passkey/list/:userId`.
+- **FIXED**: `/expo-passkey/challenge`, `/expo-passkey/authenticate`, and the `challenge-guard` middleware also use `resolveSession`.
+
+**Compatibility**: Works on better-auth 1.5.x (where the fast path is the only path taken) and 1.6+ (where the fallback kicks in when needed).
+
+### 🧪 Testing
+
+- **NEW**: `resolveSession` and `passkeySessionMiddleware` test suite — 8 cases covering the success path, throw-fallback, null-with-cookie fallback, no-cookie, missing-adapter, and ctx hydration
+
+---
+
 ## [0.3.12] - 2026-03-14
 
 ### 🔒 Security

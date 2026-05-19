@@ -3,7 +3,7 @@
  * @description Implementation of the endpoint to list user passkeys with WebAuthn info
  */
 
-import { createAuthEndpoint, sessionMiddleware } from "better-auth/api";
+import { createAuthEndpoint } from "better-auth/api";
 import { APIError } from "better-call";
 
 import { ERROR_CODES, ERROR_MESSAGES } from "../../types/errors";
@@ -12,6 +12,7 @@ import {
   listPasskeysParamsSchema,
   listPasskeysQuerySchema,
 } from "../utils/schema";
+import { passkeySessionMiddleware } from "../utils/session";
 
 import type { AuthPasskey, ResolvedSchemaConfig } from "../../types";
 
@@ -30,7 +31,7 @@ export const createListEndpoint = (options: {
       method: "GET",
       params: listPasskeysParamsSchema,
       query: listPasskeysQuerySchema,
-      use: [sessionMiddleware],
+      use: [passkeySessionMiddleware],
       metadata: {
         openapi: {
           description: "Retrieve a list of registered passkeys for the user",

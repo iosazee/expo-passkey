@@ -17,6 +17,7 @@ import { APIError } from "better-call";
 import { ERROR_CODES, ERROR_MESSAGES } from "../../types/errors";
 import type { Logger } from "../utils/logger";
 import { authenticatePasskeySchema } from "../utils/schema";
+import { resolveSession } from "../utils/session";
 
 import type {
   AuthPasskey,
@@ -33,14 +34,14 @@ export const createAuthenticateEndpoint = (options: {
   origin?: string | string[];
   schemaConfig: ResolvedSchemaConfig;
   /** @internal For testing only */
-  _sessionFetcher?: typeof getSessionFromCtx;
+  _sessionFetcher?: typeof getSessionFromCtx | typeof resolveSession;
 }) => {
   const {
     logger,
     rpId,
     origin,
     schemaConfig,
-    _sessionFetcher = getSessionFromCtx,
+    _sessionFetcher = resolveSession,
   } = options;
 
   // Convert to array of origins for consistency, or use empty array if undefined
@@ -133,7 +134,7 @@ export const createAuthenticateEndpoint = (options: {
         // Defense-in-depth: If the caller already has an active session,
         // verify the passkey belongs to the same user. This prevents
         // session-switching when a device has passkeys for multiple accounts.
-        // Note: getSessionFromCtx returns null (never throws) when no session exists,
+        // resolveSession returns null (never throws) when no session exists,
         // so a null result simply means this is a fresh login — proceed normally.
         const existingSession = await _sessionFetcher(ctx);
         if (

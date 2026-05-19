@@ -3,7 +3,7 @@
  * @description WebAuthn-based implementation for passkey registration with client preferences support
  */
 
-import { createAuthEndpoint, sessionMiddleware } from "better-auth/api";
+import { createAuthEndpoint } from "better-auth/api";
 import { APIError } from "better-call";
 import {
   verifyRegistrationResponse,
@@ -15,6 +15,7 @@ import { isoBase64URL } from "@simplewebauthn/server/helpers";
 import { ERROR_CODES, ERROR_MESSAGES } from "../../types/errors";
 import type { Logger } from "../utils/logger";
 import { registerPasskeySchema } from "../utils/schema";
+import { passkeySessionMiddleware } from "../utils/session";
 import type {
   AuthPasskey,
   PasskeyChallenge,
@@ -59,7 +60,7 @@ export const createRegisterEndpoint = (options: {
     {
       method: "POST",
       body: registerPasskeySchema,
-      use: [sessionMiddleware],
+      use: [passkeySessionMiddleware],
       metadata: {
         openapi: {
           description: "Register a new passkey using WebAuthn",

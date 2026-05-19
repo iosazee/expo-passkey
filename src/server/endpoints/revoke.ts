@@ -3,12 +3,13 @@
  * @description Implementation of the endpoint to revoke a WebAuthn passkey
  */
 
-import { createAuthEndpoint, sessionMiddleware } from "better-auth/api";
+import { createAuthEndpoint } from "better-auth/api";
 import { APIError } from "better-call";
 
 import { ERROR_CODES, ERROR_MESSAGES } from "../../types/errors";
 import type { Logger } from "../utils/logger";
 import { revokePasskeySchema } from "../utils/schema";
+import { passkeySessionMiddleware } from "../utils/session";
 
 import type { AuthPasskey, ResolvedSchemaConfig } from "../../types";
 
@@ -26,7 +27,7 @@ export const createRevokeEndpoint = (options: {
     {
       method: "POST",
       body: revokePasskeySchema,
-      use: [sessionMiddleware],
+      use: [passkeySessionMiddleware],
       metadata: {
         openapi: {
           description: "Revoke a registered WebAuthn passkey",

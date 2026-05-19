@@ -3,7 +3,9 @@
  * @description Core implementation of the Expo Passkey server plugin with WebAuthn support
  */
 
-import { createAuthEndpoint, getSessionFromCtx } from "better-auth/api";
+import { createAuthEndpoint } from "better-auth/api";
+
+import { resolveSession } from "./utils/session";
 import type { BetterAuthPlugin } from "better-auth/types";
 import { APIError } from "better-call";
 
@@ -269,11 +271,14 @@ export const expoPasskey = (options: ExpoPasskeyOptions): BetterAuthPlugin => {
           async (ctx) => {
             const body = ctx.body as { type?: string };
 
-            // For registration challenges, require session
+            // For registration challenges, require session.
+            // resolveSession is defensive against better-auth 1.6's
+            // runWithRequestState propagation issues — see
+            // ./utils/session.ts for the long-form rationale.
             if (body?.type === "registration") {
               let session;
               try {
-                session = await getSessionFromCtx(ctx);
+                session = await resolveSession(ctx, logger);
               } catch (sessionError) {
                 logger.debug("Session fetch failed for registration challenge", {
                   error:

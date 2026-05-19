@@ -55,6 +55,11 @@ jest.mock("better-auth/api", () => ({
     options,
     handler,
   })),
+  // createAuthMiddleware in real better-auth returns the handler with
+  // some bookkeeping attached. For tests we just need a function back
+  // (so the import resolves and the middleware can be used in `use: [...]`).
+  createAuthMiddleware: jest.fn((handler) => handler),
+  getSessionFromCtx: jest.fn(async () => null),
   sessionMiddleware: jest.fn(() => ({})),
   setSessionCookie: jest.fn(),
   setCookieCache: jest.fn(),
