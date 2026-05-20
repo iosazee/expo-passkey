@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.14] - 2026-05-20
+
+### 🐛 Fixes
+
+**Forward `livenessToken` from web + native clients**: deployments that pair `expo-passkey` with `expo-passkey-liveness` were failing every registration and authentication with `BAD_REQUEST` / `liveness_token_required`, because the web and native `registerPasskey` / `authenticateWithPasskey` actions:
+
+- did not declare `livenessToken` on their `data` parameter type, and
+- did not forward it in the request body to `/expo-passkey/register` or `/expo-passkey/authenticate`.
+
+The server schema (added in 0.3.12) and the liveness enforcement hook both expected the field. As a result the only working path on those deployments was the pre-liveness flow — anything that installed `expo-passkey-liveness` would hit a hard 400.
+
+This release accepts `livenessToken` on both register and authenticate (web + native) and forwards it in the request body when present. When `expo-passkey-liveness` is not installed the field is ignored by the server, so existing deployments without the hook are unaffected.
+
+---
+
 ## [0.3.13] - 2026-05-19
 
 ### 🐛 Fixes

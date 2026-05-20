@@ -195,6 +195,13 @@ export const expoPasskeyClient = (options: ExpoPasskeyClientOptions = {}) => {
             };
             timeout?: number;
             metadata?: Partial<PasskeyMetadata>;
+            /**
+             * Optional pass-through consumed by the
+             * `expo-passkey-liveness` sibling package's enforcement
+             * hook. When that package is not installed, the field is
+             * ignored by the server.
+             */
+            livenessToken?: string;
           },
           fetchOptions?: BetterFetchOption
         ): Promise<RegisterPasskeyResult> => {
@@ -304,6 +311,13 @@ export const expoPasskeyClient = (options: ExpoPasskeyClientOptions = {}) => {
                       biometricType: biometricSupport.authenticationType,
                       ...data.metadata,
                     },
+                    // Forward the optional liveness token so the
+                    // expo-passkey-liveness enforcement hook can read
+                    // it. Sent only when present so requests still
+                    // validate against deployments without the hook.
+                    ...(data.livenessToken
+                      ? { livenessToken: data.livenessToken }
+                      : {}),
                   },
                   ...fetchOptions,
                 }
@@ -372,6 +386,13 @@ export const expoPasskeyClient = (options: ExpoPasskeyClientOptions = {}) => {
             timeout?: number;
             userVerification?: "required" | "preferred" | "discouraged";
             metadata?: Partial<PasskeyMetadata>;
+            /**
+             * Optional pass-through consumed by the
+             * `expo-passkey-liveness` sibling package's enforcement
+             * hook. When that package is not installed, the field is
+             * ignored by the server.
+             */
+            livenessToken?: string;
           },
           fetchOptions?: BetterFetchOption
         ): Promise<AuthenticatePasskeyResult> => {
@@ -473,6 +494,13 @@ export const expoPasskeyClient = (options: ExpoPasskeyClientOptions = {}) => {
                       manufacturer: deviceInfo.manufacturer,
                       ...data?.metadata,
                     },
+                    // Forward the optional liveness token so the
+                    // expo-passkey-liveness enforcement hook can read
+                    // it. Sent only when present so requests still
+                    // validate against deployments without the hook.
+                    ...(data?.livenessToken
+                      ? { livenessToken: data.livenessToken }
+                      : {}),
                   },
                   credentials: "include",
                   ...fetchOptions,
