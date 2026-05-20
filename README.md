@@ -9,11 +9,10 @@
 
 This is a cross-platform Expo module and Better Auth plugin that brings passkey authentication to your Expo apps on **web, iOS, and Android**. Features a unified passkey table structure that works seamlessly across all platforms, making it perfect for both universal apps using react-native-web and projects with separate mobile and web frontends.
 
-> **v0.3.14**: Adds first-class compatibility with the companion
+> **v0.3.15**: Documentation now tracks the current
 > [`expo-passkey-liveness`](https://github.com/iosazee/expo-passkey-liveness)
-> package by forwarding optional `livenessToken` values from web and native
-> `registerPasskey` / `authenticateWithPasskey` calls. Also includes the
-> Better Auth 1.6+ session-resolution fallback introduced in v0.3.13.
+> alpha integration, the `livenessToken` forwarding added in v0.3.14, and
+> the Better Auth 1.6+ session-resolution fallback introduced in v0.3.13.
 
 ## 📱 Example Project
 
