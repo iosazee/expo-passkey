@@ -9,19 +9,26 @@
 
 This is a cross-platform Expo module and Better Auth plugin that brings passkey authentication to your Expo apps on **web, iOS, and Android**. Features a unified passkey table structure that works seamlessly across all platforms, making it perfect for both universal apps using react-native-web and projects with separate mobile and web frontends.
 
-> **🚀 v0.3.6**: Now includes web support, unified table structure, **client-controlled WebAuthn preferences**, enhanced cross-platform passkey syncing, and **session-validated security** for registration and revocation!
+> **v0.3.14**: Adds first-class compatibility with the companion
+> [`expo-passkey-liveness`](https://github.com/iosazee/expo-passkey-liveness)
+> package by forwarding optional `livenessToken` values from web and native
+> `registerPasskey` / `authenticateWithPasskey` calls. Also includes the
+> Better Auth 1.6+ session-resolution fallback introduced in v0.3.13.
 
 ## 📱 Example Project
 
-Check out our comprehensive example implementation at [neb-starter](https://github.com/iosazee/neb-starter), which demonstrates how to use Expo Passkey across a full-stack application:
+Check out the companion example monorepo at
+[`epk-example-app`](https://github.com/iosazee/epk-example-app), which
+demonstrates `expo-passkey` and `expo-passkey-liveness` end to end:
 
-- **Backend**: Built with Next.js, showcasing server-side implementation
-- **Mobile App**: Complete Expo mobile client with passkey authentication
-- **Web App**: Full web implementation using the same codebase
-- **Working Demo**: See passkey registration and authentication in action across platforms
-- **Best Practices**: Demonstrates recommended implementation patterns
+- **Backend**: Next.js 15 + Better Auth + Prisma, wiring both plugins in one `betterAuth()` call
+- **Web App**: Browser WebAuthn registration/authentication with liveness-token enforcement and debug views
+- **Mobile App**: Expo SDK 55 dev-client app using native passkeys, `expo-secure-store`, and liveness wrappers
+- **Audit Surface**: Debug routes show `passkey.metadata.liveness` and `passkeyLivenessSession` rows after ceremonies
+- **Deployment Shape**: Vercel-ready web backend plus iOS Associated Domains and Android Asset Links setup for native apps
 
-This starter kit provides a working reference that you can use as a foundation for your own projects or to understand how all the pieces fit together.
+Use it as the current integration reference when you want passkeys alone,
+passkeys plus liveness gating, or a full passwordless email-OTP fallback.
 
 ## 🎬 Video Demos
 
@@ -49,6 +56,7 @@ See Expo Passkey in action on different platforms:
   - [Android Setup](#android-setup)
   - [Web Setup](#web-setup)
 - [Quick Start](#quick-start)
+- [Optional Liveness Gating](#optional-liveness-gating)
 - [Complete API Reference](#complete-api-reference)
 - [Database Schema](#database-schema)
 - [Custom Schema Configuration](#custom-schema-configuration)
@@ -58,6 +66,7 @@ See Expo Passkey in action on different platforms:
 - [Troubleshooting](#troubleshooting)
 - [Security Considerations](#security-considerations)
 - [Error Handling](#error-handling)
+- [Example Project](#example-project)
 - [License](#license)
 
 ## Overview
@@ -77,9 +86,11 @@ This plugin implements a comprehensive FIDO2/WebAuthn passkey solution that conn
 - ✅ **Enterprise-Ready Security**: Support for direct attestation and required user verification
 - ✅ **Cross-Platform Syncing**: Automatic support for iCloud Keychain, Google Password Manager, and hardware keys
 - ✅ **Seamless Integration**: Works directly with Better Auth server and client
+- ✅ **Better Auth 1.6+ Compatible**: Session fallback avoids false `SESSION_REQUIRED` failures in newer Better Auth runtimes
 - ✅ **Complete Lifecycle Management**: Registration, authentication, and revocation flows
 - ✅ **Type-Safe API**: Comprehensive TypeScript definitions and autocomplete
 - ✅ **Secure Device Binding**: Ensures keys are bound to specific devices/platforms
+- ✅ **Optional Liveness Gating**: Forwards `livenessToken` to the companion `expo-passkey-liveness` enforcement hook
 - ✅ **Automatic Cleanup**: Optional automatic revocation of unused passkeys
 - ✅ **Rich Metadata**: Store and retrieve device-specific context with each passkey
 - ✅ **Portable Passkeys**: Supports iCloud Keychain, Google Password Manager, and hardware keys
@@ -106,6 +117,19 @@ npx expo install expo-application expo-local-authentication expo-secure-store ex
 # For web support, also install:
 npm install @simplewebauthn/browser
 ```
+
+### Optional Liveness Extension
+
+If you want face presentation-attack-detection (PAD) before passkey
+registration or authentication, install the sibling package too:
+
+```bash
+npm install expo-passkey expo-passkey-liveness@next
+```
+
+`expo-passkey` works without the liveness package. When the sibling
+plugin is installed and configured with server enforcement,
+`livenessToken` becomes the bridge between the two packages.
 
 **Import Strategy**:
 The package uses platform-specific entry points to prevent import conflicts:
@@ -247,7 +271,7 @@ export const auth = betterAuth({
       origin: [
         "https://example.com",
         "android:apk-key-hash:<your-base64url-encoded-hash>"
-      ]
+      ],
       // Optional settings
       logger: {
         enabled: true,           // Enable detailed logging (default: true in dev)
@@ -266,11 +290,15 @@ export const auth = betterAuth({
       schema: {
         authPasskey: { modelName: "user_passkeys" },
         passkeyChallenge: { modelName: "auth_challenges" }
-  }
+      }
     })
   ]
 });
 ```
+
+For serverless environments such as Vercel, set
+`cleanup.disableInterval: true` so the auth handler does not keep background
+timers alive.
 
 2. **Migrate the Database**
 
@@ -358,6 +386,108 @@ export const {
 } = authClient;
 ```
 
+## Optional Liveness Gating
+
+`expo-passkey` accepts an optional `livenessToken` on both registration
+and authentication. The core package does not validate this token by
+itself; it simply forwards the field so `expo-passkey-liveness` can
+enforce it in a Better Auth hook before the passkey endpoint handler runs.
+
+Compose `expoPasskeyLiveness()` after `expoPasskey()` in the same
+`betterAuth()` call. Both plugins must use the same `rpId`.
+
+```typescript
+import { betterAuth } from "better-auth";
+import { expoPasskey } from "expo-passkey/server";
+import {
+  expoPasskeyLiveness,
+  rekognitionProvider,
+  redisReplayStore,
+} from "expo-passkey-liveness/server";
+
+export const auth = betterAuth({
+  plugins: [
+    expoPasskey({
+      rpId: "example.com",
+      rpName: "Your App Name",
+      origin: ["https://example.com"],
+    }),
+    expoPasskeyLiveness({
+      rpId: "example.com",
+      liveness: {
+        required: "both", // "registration" | "authentication" | "both"
+        provider: rekognitionProvider({ region: "us-east-1" }),
+        minScore: 90,
+        replayStore: redisReplayStore(redis),
+      },
+      cleanup: {
+        disableInterval: true, // recommended in serverless runtimes
+      },
+    }),
+  ],
+});
+```
+
+The liveness package exposes:
+
+- `POST /expo-passkey/liveness/session`
+- `POST /expo-passkey/liveness/verify`
+- a `hooks.before` enforcement layer that validates `livenessToken`
+  before `/expo-passkey/register` and/or `/expo-passkey/authenticate`
+  runs
+- an audit slice written into `passkey.metadata.liveness`
+
+Native clients can use the liveness wrappers:
+
+```typescript
+import {
+  registerPasskeyWithLiveness,
+  authenticateWithPasskeyAndLiveness,
+} from "expo-passkey-liveness/native";
+
+const registerResult = await registerPasskeyWithLiveness(
+  {
+    userId: session.user.id,
+    userName: session.user.email,
+    displayName: session.user.name ?? session.user.email,
+    rpId: "example.com",
+    rpName: "Your App Name",
+  },
+  { fetcher, registerPasskey }
+);
+
+const authResult = await authenticateWithPasskeyAndLiveness(
+  { rpId: "example.com" },
+  { fetcher, authenticateWithPasskey }
+);
+```
+
+Or pass a token manually:
+
+```typescript
+const live = await verifyLiveness(
+  { challenge: "registration" },
+  { fetcher }
+);
+
+if (!live.error && live.data) {
+  await registerPasskey({
+    userId: session.user.id,
+    userName: session.user.email,
+    rpId: "example.com",
+    rpName: "Your App Name",
+    livenessToken: live.data.livenessToken,
+  });
+}
+```
+
+The liveness package's web entrypoint is currently a stub that returns
+`LIVENESS_NOT_SUPPORTED`; the example app uses a local web-only adapter
+to exercise the server pipeline with a demo `customProvider`.
+
+When `expo-passkey-liveness` is not installed or does not gate an
+operation, `livenessToken` is ignored and existing passkey-only flows
+continue to work.
 
 ## Complete API Reference
 
@@ -415,11 +545,11 @@ expoPasskeyClient({
 
 Registers a new passkey for a user with full client preference control.
 
-**⚠️ Authentication Required**: User must be authenticated before calling this function. The server validates the userId from the active session.
+**⚠️ Authentication Required**: User must be authenticated before calling this function. The server associates the passkey with the active session user, not a trusted client-supplied user id.
 
 ```typescript
 interface RegisterOptions {
-  userId: string;              // Required: User ID to associate with the passkey
+  userId: string;              // Required client-side WebAuthn user handle/local credential key
   userName: string;            // Required: User name for the passkey
   displayName?: string;        // Optional: Display name (defaults to userName)
   rpId?: string;               // Optional: Relying Party ID (auto-detected on web)
@@ -443,6 +573,8 @@ interface RegisterOptions {
     biometricType?: string;    // Type of biometric used
     [key: string]: unknown;        // Any other custom metadata
   };
+
+  livenessToken?: string;      // Optional: forwarded to expo-passkey-liveness when installed
 }
 
 // Return type
@@ -471,6 +603,7 @@ interface AuthenticateOptions {
     appVersion?: string;       // App version
     [key: string]: unknown;        // Any other custom metadata
   };
+  livenessToken?: string;      // Optional: forwarded to expo-passkey-liveness when installed
 }
 
 // Return type
@@ -929,6 +1062,7 @@ await revokePasskey({ credentialId: "cred-123" });
 - **Cross-Platform Security**: Passkeys maintain the same security properties across platforms
 - **Domain Verification**: Ensure proper domain verification for both web and mobile
 - **Relying Party ID**: Configure `rpId` correctly to prevent cross-domain attacks
+- **Liveness Tokens**: If you use `expo-passkey-liveness`, configure replay protection in production and keep `rpId` identical between both plugins
 - **Portable Passkeys**: iCloud Keychain and Google Password Manager sync passkeys securely
 - **Hardware Keys**: Support for hardware security keys across all platforms
 - **Attestation Handling**: Proper support for enterprise attestation requirements
@@ -968,6 +1102,22 @@ try {
 }
 ```
 
+## Example Project
+
+The current reference app lives in
+[`epk-example-app`](https://github.com/iosazee/epk-example-app). It is a
+two-workspace monorepo:
+
+- `apps/web`: Next.js 15, Better Auth, Prisma, email OTP fallback, browser
+  passkeys, liveness enforcement, debug routes, and Vercel deployment shape
+- `apps/mobile`: Expo SDK 55 dev-client app using `@better-auth/expo`,
+  `expo-passkey/native`, `expo-passkey-liveness/native`, and the same backend
+
+The web app uses a demo `customProvider` that auto-passes liveness so you can
+exercise the server pipeline without third-party credentials. The mobile app is
+the place to test the native camera ceremony after configuring a native
+provider adapter such as Rekognition or iProov.
+
 ## License
 
 MIT
@@ -986,4 +1136,5 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 - [SimpleWebAuthn](https://simplewebauthn.dev/)
 - [Apple Associated Domains](https://developer.apple.com/documentation/xcode/supporting-associated-domains)
 - [Android Asset Links](https://developers.google.com/digital-asset-links)
-- [Neb Starter Example Project](https://github.com/iosazee/neb-starter)
+- [Expo Passkey Liveness](https://github.com/iosazee/expo-passkey-liveness)
+- [EPK Example App](https://github.com/iosazee/epk-example-app)
