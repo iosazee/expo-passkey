@@ -132,9 +132,15 @@ export async function resolveSession(
       return null;
     }
 
-    const session = await anyCtx.context!.internalAdapter!.findSession!(
-      token as string,
-    );
+    // Narrow context + adapter via local bindings — the existence checks
+    // above already guarantee both are present, so no need for the
+    // eslint-flagged non-null assertions.
+    const adapterCtx = anyCtx.context;
+    const findSession = adapterCtx?.internalAdapter?.findSession;
+    if (!adapterCtx || !findSession) {
+      return stdResult;
+    }
+    const session = await findSession(token as string);
     if (!session?.session || !session?.user?.id) {
       return null;
     }

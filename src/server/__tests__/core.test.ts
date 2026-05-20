@@ -4,7 +4,6 @@ import type { BetterAuthPlugin } from "better-auth/types";
 // it for `as unknown as` casts; widening to `any` keeps the test
 // portable across versions without depending on the transitive
 // `@better-auth/core` package path.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AuthContext = any;
 import { ERROR_CODES, type AuthPasskey } from "../../types";
 import { expoPasskey } from "../core";

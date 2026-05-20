@@ -35,8 +35,16 @@ jobs:
           node-version: 22
           registry-url: "https://registry.npmjs.org"
 
-      - name: Install npm 11.5.1+
-        run: npm install -g npm@latest
+      # Provenance requires npm >= 11.5.1. Node 22's bundled npm is 10.x,
+      # and `npm install -g npm@latest` has been flaky on GitHub runners
+      # (intermittent `Cannot find module 'promise-retry'` in the runner's
+      # pre-installed npm). corepack ships a clean npm without self-update
+      # races.
+      - name: Activate npm via corepack
+        run: |
+          corepack enable
+          corepack prepare npm@11.5.1 --activate
+          npm --version
 
       - run: npm ci
 
