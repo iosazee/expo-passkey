@@ -5,15 +5,16 @@ on:
     tags:
       - "v*"
 
-permissions: {}
+permissions:
+  contents: read
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
 
@@ -28,27 +29,16 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      # No `registry-url` and no NODE_AUTH_TOKEN: this package publishes
-      # via npm Trusted Publishers (OIDC). setup-node's `registry-url`
-      # would write `//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}`
-      # into .npmrc — and an empty _authToken= line suppresses npm's
-      # OIDC token-exchange, causing the registry to reject the PUT
-      # with 404 even though sigstore provenance signing succeeds.
-      # See https://docs.npmjs.com/trusted-publishers
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
+          registry-url: "https://registry.npmjs.org"
 
-      # Provenance + Trusted Publishers require npm >= 11.5.1. Node 22's
-      # bundled npm is 10.x. corepack ships a clean npm without the
-      # `npm install -g npm@latest` self-update race that's been
-      # intermittently broken on GitHub runners.
-      - name: Activate npm via corepack
+      - name: Verify npm trusted publishing support
         run: |
-          corepack enable
-          corepack prepare npm@11.5.1 --activate
+          node --version
           npm --version
 
       - run: npm ci
